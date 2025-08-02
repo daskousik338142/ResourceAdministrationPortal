@@ -1,0 +1,1033 @@
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import api from '../services/api';
+import '../styles/nbl-list.css';
+
+const NBLList = () => {
+  const [excelData, setExcelData] = useState([]);
+  const [headers, setHeaders] = useState([]);
+  const [recordsPerPage, setRecordsPerPage] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleColumns, setVisibleColumns] = useState({});
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ column: null, direction: null });
+  const [columnFilters, setColumnFilters] = useState({});
+  const [editingCell, setEditingCell] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [lastSaved, setLastSaved] = useState(null);
+  const [recordIds, setRecordIds] = useState([]); // Store record IDs for backend updates
+
+  // Function to load existing data from backend
+  const loadExistingData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getNBLList();
+
+      console.log('response.data:', response.data);
+      
+      if (response.data.success && response.data.data.length > 0) {
+        const records = response.data.data;
+        
+        // Extract headers from the first record's upload info or from object keys
+        let headerRow = [];
+        if (records[0]._uploadInfo && records[0]._uploadInfo.headers) {
+          headerRow = records[0]._uploadInfo.headers;
+        } else {
+          // Fallback: extract headers from object keys (excluding metadata)
+          headerRow = Object.keys(records[0]).filter(key => 
+            !key.startsWith('_') && key !== 'uploadTimestamp'
+          );
+        }
+        
+        // Convert records back to array format for compatibility with existing code
+        const dataRows = records.map(record => {
+          return headerRow.map(header => record[header]);
+        });
+        
+        // Store record IDs for backend updates
+        const ids = records.map(record => record._id);
+        setRecordIds(ids);
+        
+        setHeaders(headerRow);
+        setExcelData(dataRows);
+        
+        // Set filename from upload info if available
+        if (records[0]._uploadInfo) {
+          setFileName(records[0]._uploadInfo.fileName);
+          setLastSaved(new Date(records[0]._uploadInfo.uploadTimestamp).toLocaleString());
+        }
+        
+        // Initialize column visibility
+        const initialVisibility = {};
+        headerRow.forEach((header, index) => {
+          initialVisibility[index] = true;
+        });
+        setVisibleColumns(initialVisibility);
+        
+        // Initialize column filters
+        const initialFilters = {};
+        headerRow.forEach((header, index) => {
+          initialFilters[index] = '';
+        });
+        setColumnFilters(initialFilters);
+      }
+    } catch (error) {
+      console.error('Error loading existing data:', error);
+      // Don't show alert for this error as it might be expected (no data exists yet)
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load existing data on component mount
+  useEffect(() => {
+    loadExistingData();
+  }, []);
+
+  // Helper function to convert Excel date serial numbers to readable dates
+  const convertExcelDate = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    
+    // Check if it's already a string that looks like a date
+    if (typeof value === 'string' && (value.includes('/') || value.includes('-'))) {
+      return value;
+    }
+    
+    // Check if it's a number (Excel date serial)
+    if (typeof value === 'number' && value > 1) {
+      try {
+        // Excel epoch starts from 1900-01-01, but Excel incorrectly treats 1900 as a leap year
+        const excelEpoch = new Date(1900, 0, 1);
+        const days = value - 1; // Subtract 1 to account for Excel's off-by-one error
+        const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+        
+        // Check if the date is valid and reasonable (after 1900 and before 2100)
+        if (date.getFullYear() >= 1900 && date.getFullYear() <= 2100) {
+          return date.toLocaleDateString();
+        }
+      } catch (error) {
+        // If conversion fails, return original value
+      }
+    }
+    
+    return value;
+  };
+
+  // Helper function to check if a column contains dates
+  const isDateColumn = (header, columnData) => {
+    const headerLower = header.toLowerCase();
+    const dateKeywords = ['date', 'start', 'end', 'billiability', 'release', 'assignment'];
+    
+    // Check if header contains date-related keywords
+    const hasDateKeyword = dateKeywords.some(keyword => headerLower.includes(keyword));
+    
+    // Check if the data looks like dates (numbers that could be Excel date serials)
+    const sampleValues = columnData.slice(0, 10).filter(val => val !== null && val !== undefined && val !== '');
+    const hasDateLikeNumbers = sampleValues.length > 0 && 
+      sampleValues.some(val => typeof val === 'number' && val > 40000 && val < 60000); // Excel dates roughly between 2009-2164
+    
+    return hasDateKeyword && (hasDateLikeNumbers || sampleValues.some(val => 
+      typeof val === 'string' && (val.includes('/') || val.includes('-'))
+    ));
+  };
+
+  // Helper function to check if a column is editable (date columns)
+  const isEditableColumn = (header) => {
+    const headerLower = header.toLowerCase();
+    const editableKeywords = ['assignment start date', 'billability', 'release date', 'start date'];
+    return editableKeywords.some(keyword => headerLower.includes(keyword.toLowerCase()));
+  };
+
+  // Helper function to check if a column is a dropdown editable column
+  const isDropdownColumn = (header) => {
+    const headerLower = header.toLowerCase();
+    // More flexible matching for NBL category columns
+    return headerLower.includes('nbl') && headerLower.includes('category');
+  };
+
+  // Helper function to get distinct values for dropdown columns
+  const getDistinctValues = (columnIndex) => {
+    const header = headers[columnIndex];
+    const headerLower = header ? header.toLowerCase() : '';
+    
+    // Fixed options for NBL category columns (both NBL Category and Secondary NBL Category)
+    if (headerLower.includes('nbl') && headerLower.includes('category')) {
+      return [
+        'NBL',
+        'Awaiting Billing',
+        'NBL for month',
+        'Billed'
+      ];
+    }
+    
+    // For other columns, return distinct values from data
+    const values = excelData.map(row => row[columnIndex])
+      .filter(val => val !== null && val !== undefined && val !== '')
+      .map(val => val.toString().trim());
+    return [...new Set(values)].sort();
+  };
+
+  // Helper function to format date for input field
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return date.toLocaleDateString();
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Function to save data to backend
+  const saveDataToBackend = async (data, headers, fileName) => {
+    try {
+      console.log('=== Frontend Upload Debug ===');
+      console.log('Data rows:', data.length);
+      console.log('Headers:', headers);
+      console.log('FileName:', fileName);
+      console.log('Sample data row:', data[0]);
+      
+      // Test backend connectivity first
+      try {
+        console.log('Testing backend connectivity...');
+        const healthResponse = await fetch('http://localhost:5001/api/health');
+        console.log('Health check response status:', healthResponse.status);
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          console.log('Backend is reachable:', healthData);
+        } else {
+          console.error('Backend health check failed:', healthResponse.status);
+        }
+      } catch (healthError) {
+        console.error('Backend connectivity test failed:', healthError);
+        alert('Cannot connect to backend server. Please ensure the backend is running on port 5001.');
+        return;
+      }
+      
+      // Convert array data to objects using headers as keys
+      const recordObjects = data.map(row => {
+        const record = {};
+        headers.forEach((header, index) => {
+          record[header] = row[index];
+        });
+        return record;
+      });
+
+      console.log('Record objects count:', recordObjects.length);
+      console.log('Sample record object:', recordObjects[0]);
+
+      const response = await api.uploadNBLData(recordObjects, fileName, headers);
+      
+      if (response.data.success) {
+        setLastSaved(new Date().toLocaleString());
+        console.log('Data saved successfully to backend:', response.data.message);
+        
+        // Don't reload data here since we already have it in the UI
+        // Just clear old record IDs and get new ones in the background
+        setTimeout(async () => {
+          try {
+            const freshData = await api.getNBLList();
+            if (freshData.data.success && freshData.data.data.length > 0) {
+              const ids = freshData.data.data.map(record => record._id);
+              setRecordIds(ids);
+              console.log('Updated record IDs for future edits');
+            }
+          } catch (error) {
+            console.log('Failed to get updated record IDs, but UI data is still valid');
+          }
+        }, 1000);
+      } else {
+        console.error('Failed to save data:', response.data.message);
+        alert('Failed to save data to server. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving data to backend:', error);
+      alert('Error saving data to server. Please check your connection and try again.');
+    }
+  };
+
+  const handleFileUpload = useCallback((file) => {
+    console.log('=== File Upload Started ===');
+    console.log('File:', file);
+    
+    if (!file) {
+      console.log('No file provided');
+      return;
+    }
+
+    setIsLoading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        console.log('File read successfully, processing...');
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        console.log('Excel data parsed:', jsonData.length, 'rows');
+        console.log('First 3 rows of raw Excel data:');
+        console.log('Row 0:', jsonData[0]);
+        console.log('Row 1:', jsonData[1]);
+        console.log('Row 2:', jsonData[2]);
+
+        if (jsonData.length > 0) {
+          // Check if data needs to be transposed
+          // If the first column contains what looks like headers, we need to transpose
+          const firstColumn = jsonData.map(row => row[0]).filter(cell => cell !== null && cell !== undefined && cell !== '');
+          const firstRow = jsonData[0].filter(cell => cell !== null && cell !== undefined && cell !== '');
+          
+          console.log('First column values:', firstColumn.slice(0, 5));
+          console.log('First row values:', firstRow.slice(0, 5));
+          
+          // Determine if we need to transpose by checking if first column looks like headers
+          const firstColumnLooksLikeHeaders = firstColumn.length > 1 && 
+            firstColumn.some(val => typeof val === 'string' && 
+              (val.toLowerCase().includes('name') || 
+               val.toLowerCase().includes('id') || 
+               val.toLowerCase().includes('category') ||
+               val.toLowerCase().includes('date') ||
+               val.toLowerCase().includes('status')));
+               
+          let processedJsonData = jsonData;
+          
+          if (firstColumnLooksLikeHeaders && firstRow.length > firstColumn.length) {
+            console.log('🔄 Data appears to be transposed - fixing orientation...');
+            // Transpose the data: convert rows to columns and columns to rows
+            const maxCols = Math.max(...jsonData.map(row => row.length));
+            processedJsonData = [];
+            
+            for (let col = 0; col < maxCols; col++) {
+              const newRow = [];
+              for (let row = 0; row < jsonData.length; row++) {
+                newRow.push(jsonData[row][col] || '');
+              }
+              processedJsonData.push(newRow);
+            }
+            
+            console.log('✅ Data transposed successfully');
+            console.log('New first row (headers):', processedJsonData[0]);
+            console.log('New second row (data):', processedJsonData[1]);
+          } else {
+            console.log('✅ Data orientation is correct - no transposition needed');
+          }
+
+          const headerRow = processedJsonData[0];
+          const dataRows = processedJsonData.slice(1).filter(row => 
+            row.some(cell => cell !== null && cell !== undefined && cell !== '')
+          );
+          
+          console.log('📋 HEADER EXTRACTION:');
+          console.log('Raw header row:', headerRow);
+          console.log('Header row length:', headerRow?.length);
+          console.log('Header row type:', typeof headerRow);
+          console.log('Is header row an array?', Array.isArray(headerRow));
+          
+          // Ensure headerRow is properly formatted
+          let finalHeaders = [];
+          if (Array.isArray(headerRow)) {
+            finalHeaders = headerRow.filter(h => h !== null && h !== undefined && h !== '').map(h => String(h).trim());
+          } else {
+            console.error('❌ Header row is not an array!', headerRow);
+            finalHeaders = ['Column 1', 'Column 2', 'Column 3']; // fallback
+          }
+          
+          console.log('📋 FINAL HEADERS:', finalHeaders);
+          console.log('Final data rows count:', dataRows.length);
+          console.log('First final data row:', dataRows[0]);
+          console.log('Second final data row:', dataRows[1]);
+          
+          // Process data and convert dates
+          const processedData = dataRows.map((row, rowIdx) => {
+            console.log(`Processing row ${rowIdx}:`, row);
+            const processedRow = finalHeaders.map((header, index) => {
+              const cellValue = row[index];
+              const columnData = dataRows.map(r => r[index]);
+              
+              if (isDateColumn(header, columnData)) {
+                return convertExcelDate(cellValue);
+              }
+              return cellValue;
+            });
+            console.log(`Processed row ${rowIdx}:`, processedRow);
+            return processedRow;
+          });
+          
+          console.log('Final processed data structure:');
+          console.log('Processed data length:', processedData.length, 'rows');
+          console.log('Header count:', finalHeaders.length);
+          console.log('First processed row:', processedData[0]);
+          console.log('First processed row length:', processedData[0]?.length);
+          
+          // FIRST: Update the UI immediately with the processed data
+          setHeaders(finalHeaders);  // Use finalHeaders instead of headerRow
+          setExcelData(processedData);
+          setFileName(file.name);
+          setLastSaved(new Date().toLocaleString());
+          
+          console.log('✅ State updated with corrected headers and data');
+          
+          // Initialize column visibility
+          const initialVisibility = {};
+          finalHeaders.forEach((header, index) => {
+            initialVisibility[index] = true;
+          });
+          setVisibleColumns(initialVisibility);
+          
+          // Initialize column filters
+          const initialFilters = {};
+          finalHeaders.forEach((header, index) => {
+            initialFilters[index] = '';
+          });
+          setColumnFilters(initialFilters);
+          
+          setCurrentPage(1);
+          setSearchTerm('');
+          setSortConfig({ column: null, direction: null });
+
+          // THEN: Save data to backend in the background (without blocking UI)
+          setTimeout(() => {
+            saveDataToBackend(processedData, finalHeaders, file.name);  // Use finalHeaders
+          }, 100);
+        } else {
+          console.log('No data found in Excel file');
+          alert('No data found in the Excel file. Please check the file content.');
+        }
+      } catch (error) {
+        console.error('Error reading file:', error);
+        alert('Error reading file. Please make sure it\'s a valid Excel file.');
+      } finally {
+        setIsLoading(false);
+        console.log('=== File Upload Completed ===');
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      setIsLoading(false);
+      alert('Error reading file. Please try again.');
+    };
+    
+    reader.readAsBinaryString(file);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFileUpload(files[0]);
+    }
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  }, []);
+
+  const handleFileInput = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const toggleColumnVisibility = (columnIndex) => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      [columnIndex]: !prev[columnIndex]
+    }));
+  };
+
+  const clearAllData = async () => {
+    if (window.confirm('Are you sure you want to clear all data? This will remove all records from the system.')) {
+      try {
+        setIsLoading(true);
+        await api.clearNBLData();
+        setExcelData([]);
+        setHeaders([]);
+        setFileName('');
+        setLastSaved(null);
+        setRecordIds([]);
+        setCurrentPage(1);
+        setSearchTerm('');
+        setSortConfig({ column: null, direction: null });
+        setColumnFilters({});
+        setVisibleColumns({});
+        alert('All data cleared successfully.');
+      } catch (error) {
+        console.error('Error clearing data:', error);
+        alert('Failed to clear data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleCellEdit = async (rowIndex, columnIndex, value) => {
+    const actualRowIndex = (currentPage - 1) * recordsPerPage + rowIndex;
+    const newData = [...excelData];
+    newData[actualRowIndex] = [...newData[actualRowIndex]];
+    newData[actualRowIndex][columnIndex] = value;
+    setExcelData(newData);
+    
+    // Update backend if we have record IDs
+    if (recordIds.length > actualRowIndex && recordIds[actualRowIndex]) {
+      try {
+        const recordId = recordIds[actualRowIndex];
+        const headerName = headers[columnIndex];
+        const updateData = { [headerName]: value };
+        
+        await api.updateNBLRecord(recordId, updateData);
+        setLastSaved(new Date().toLocaleTimeString());
+      } catch (error) {
+        console.error('Error updating record:', error);
+        // Don't show alert for individual cell updates to avoid being intrusive
+      }
+    } else {
+      // If no record ID available, just update local state
+      setLastSaved(new Date().toLocaleTimeString());
+    }
+  };
+
+  // Cell editing functions
+  const startEditing = (rowIndex, columnIndex, currentValue) => {
+    setEditingCell({ rowIndex, columnIndex });
+    setEditingValue(currentValue || '');
+  };
+
+  const stopEditing = async () => {
+    if (editingCell && editingValue !== null) {
+      await handleCellEdit(editingCell.rowIndex, editingCell.columnIndex, editingValue);
+    }
+    setEditingCell(null);
+    setEditingValue('');
+  };
+
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditingValue('');
+  };
+
+  const handleSort = (columnIndex) => {
+    let direction = 'asc';
+    if (sortConfig.column === columnIndex && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ column: columnIndex, direction });
+  };
+
+  const handleColumnFilter = (columnIndex, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnIndex]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const clearColumnFilters = () => {
+    const clearedFilters = {};
+    headers.forEach((header, index) => {
+      clearedFilters[index] = '';
+    });
+    setColumnFilters(clearedFilters);
+    setCurrentPage(1);
+  };
+
+  const filteredAndSortedData = useMemo(() => {
+    let data = [...excelData];
+
+    // Apply search filter
+    if (searchTerm) {
+      data = data.filter(row => 
+        row.some(cell => 
+          cell && cell.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Apply column filters
+    Object.keys(columnFilters).forEach(columnIndex => {
+      const filterValue = columnFilters[columnIndex];
+      if (filterValue) {
+        data = data.filter(row => {
+          const cellValue = row[columnIndex];
+          return cellValue && cellValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+    });
+
+    // Apply sorting
+    if (sortConfig.column !== null) {
+      data.sort((a, b) => {
+        const aVal = a[sortConfig.column] || '';
+        const bVal = b[sortConfig.column] || '';
+        
+        if (aVal < bVal) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aVal > bVal) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return data;
+  }, [excelData, searchTerm, sortConfig, columnFilters]);
+
+  const getPaginatedData = () => {
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = startIndex + recordsPerPage;
+    return filteredAndSortedData.slice(startIndex, endIndex);
+  };
+
+  const exportToExcel = () => {
+    if (filteredAndSortedData.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    try {
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...filteredAndSortedData]);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'NBL Data');
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `NBL_Export_${timestamp}.xlsx`;
+      
+      XLSX.writeFile(workbook, filename);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  };
+
+  const clearData = async () => {
+    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      try {
+        // Clear backend data
+        await api.clearNBLData();
+        
+        // Clear frontend state
+        setExcelData([]);
+        setHeaders([]);
+        setFileName('');
+        setSearchTerm('');
+        setSortConfig({ column: null, direction: null });
+        setColumnFilters({});
+        setEditingCell(null);
+        setEditingValue('');
+        setLastSaved(null);
+        setCurrentPage(1);
+        setRecordIds([]);
+        setVisibleColumns({});
+        
+        alert('All data has been cleared successfully.');
+      } catch (error) {
+        console.error('Error clearing data:', error);
+        alert('Error clearing data from server. Please try again.');
+      }
+    }
+  };
+
+  const totalPages = Math.ceil(filteredAndSortedData.length / recordsPerPage);
+  const paginatedData = getPaginatedData();
+
+  return (
+    <div className="nbl-list-container">
+      <div className="page-header">
+        <div className="tab-header">
+          <h1>NBL List</h1>
+        </div>
+        <p>Upload Excel file to view and manage NBL data</p>
+      </div>
+
+      <div className="upload-section">
+        <div 
+          className={`drop-zone ${isDragActive ? 'active' : ''} ${isLoading ? 'loading' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          <div className="drop-zone-content">
+            {isLoading ? (
+              <>
+                <div className="upload-icon spinner">⌛</div>
+                <p>Processing file...</p>
+              </>
+            ) : (
+              <>
+                <div className="upload-icon">📁</div>
+                <p>Drag & drop your Excel file here, or click to browse</p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileInput}
+                  className="file-input"
+                  id="file-upload"
+                  disabled={isLoading}
+                />
+                <label htmlFor="file-upload" className="upload-button">
+                  Choose File
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+        {fileName && (
+          <div className="file-info">
+            <div className="file-details">
+              <span>📄 {fileName}</span>
+              <span className="record-count">({excelData.length} total records)</span>
+              {searchTerm && (
+                <span className="filtered-count">({filteredAndSortedData.length} filtered)</span>
+              )}
+              {lastSaved && (
+                <span className="last-saved">Last edited: {lastSaved}</span>
+              )}
+            </div>
+            <button onClick={clearData} className="clear-button">
+              Clear Data
+            </button>
+          </div>
+        )}
+      </div>
+
+      {excelData.length > 0 && (
+        <div className="data-section">
+          <div className="search-section">
+            <div className="control-group">
+              <label>Search:</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search in all columns..."
+                className="search-input"
+              />
+            </div>
+          </div>
+
+          <div className="table-wrapper">
+            <div className="table-tabs-container">
+              <div className="table-tabs-left">
+                <div className="tab active">
+                  📊 Table Data
+                </div>
+                <div className="tab column-visibility-tab">
+                  👁️ Column Visibility
+                  <div className="column-visibility-dropdown">
+                    <div className="column-toggles">
+                      {headers.map((header, index) => (
+                        <label key={index} className="column-toggle">
+                          <input
+                            type="checkbox"
+                            checked={visibleColumns[index]}
+                            onChange={() => toggleColumnVisibility(index)}
+                          />
+                          <span className="column-name">{header}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="table-tabs-right">
+                <div className="tab control-tab">
+                  <button onClick={clearColumnFilters} className="clear-filters-button">
+                    🧹 Clear Filters
+                  </button>
+                </div>
+                <div className="tab control-tab">
+                  📄 Rows: 
+                  <select 
+                    value={recordsPerPage} 
+                    onChange={(e) => {
+                      setRecordsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="inline-select"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={75}>75</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <div className="tab control-tab">
+                  <button onClick={exportToExcel} className="export-tab-button">
+                    📊 Export Data
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="table-container">
+              {/* DEBUG: Show headers structure */}
+              <div style={{
+                background: '#ffffcc',
+                padding: '10px',
+                margin: '10px 0',
+                border: '1px solid #ccc',
+                fontSize: '12px'
+              }}>
+                <strong>🔍 HEADER DEBUG:</strong><br/>
+                Headers Array: {JSON.stringify(headers)}<br/>
+                Headers Length: {headers.length}<br/>
+                Headers Type: {typeof headers}<br/>
+                Is Array: {Array.isArray(headers) ? 'Yes' : 'No'}<br/>
+                Visible Columns: {JSON.stringify(visibleColumns)}
+              </div>
+              
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {headers && headers.length > 0 && headers.map((header, index) => (
+                      <th 
+                        key={`header-${index}`}
+                        className="table-header"
+                        style={{ 
+                          display: visibleColumns[index] ? 'table-cell' : 'none',
+                          background: '#f8f9fa',
+                          border: '1px solid #dee2e6',
+                          padding: '12px',
+                          textAlign: 'left',
+                          fontWeight: 'bold',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div 
+                            onClick={() => handleSort(index)}
+                            style={{ 
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <span>{String(header || `Column ${index + 1}`)}</span>
+                            <span>
+                              {sortConfig.column === index && (
+                                sortConfig.direction === 'asc' ? '↑' : '↓'
+                              )}
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder={`Filter ${header}...`}
+                            value={columnFilters[index] || ''}
+                            onChange={(e) => handleColumnFilter(index, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              width: '100%',
+                              padding: '4px 8px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedData && paginatedData.length > 0 && paginatedData.map((row, rowIndex) => (
+                    <tr key={`row-${rowIndex}`}>
+                      {headers && headers.length > 0 && headers.map((header, cellIndex) => (
+                        visibleColumns[cellIndex] && (
+                          <td 
+                            key={`cell-${rowIndex}-${cellIndex}`}
+                            style={{ 
+                              border: '1px solid #dee2e6',
+                              padding: '8px 12px',
+                              verticalAlign: 'top'
+                            }}
+                          >
+                            <span>{row[cellIndex] || ''}</span>
+                          </td>
+                        )
+                      ))}
+                    </tr>
+                  ))}
+                            {isEditableColumn(header) ? (
+                              editingCell && 
+                              editingCell.rowIndex === rowIndex && 
+                              editingCell.columnIndex === cellIndex ? (
+                                <div className="edit-cell-container">
+                                  <input
+                                    type="date"
+                                    className="date-input"
+                                    value={formatDateForInput(editingValue)}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onBlur={stopEditing}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') stopEditing();
+                                      if (e.key === 'Escape') cancelEditing();
+                                    }}
+                                    autoFocus
+                                  />
+                                  <input
+                                    type="text"
+                                    className="text-input"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onBlur={stopEditing}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') stopEditing();
+                                      if (e.key === 'Escape') cancelEditing();
+                                    }}
+                                    placeholder="Or type date..."
+                                  />
+                                </div>
+                              ) : (
+                                <div 
+                                  className="editable-cell"
+                                  onClick={() => startEditing(rowIndex, cellIndex, row[cellIndex])}
+                                  title="Click to edit date"
+                                >
+                                  {formatDateForDisplay(row[cellIndex]) || ''}
+                                  <span className="edit-icon">✏️</span>
+                                </div>
+                              )
+                            ) : isDropdownColumn(header) ? (
+                              editingCell && 
+                              editingCell.rowIndex === rowIndex && 
+                              editingCell.columnIndex === cellIndex ? (
+                                <div className="edit-cell-container">
+                                  <select
+                                    className="dropdown-select"
+                                    value={editingValue || ''}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onBlur={stopEditing}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') stopEditing();
+                                      if (e.key === 'Escape') cancelEditing();
+                                    }}
+                                    autoFocus
+                                  >
+                                    <option value="">-- Select {header} --</option>
+                                    {getDistinctValues(cellIndex).map((option, optIndex) => (
+                                      <option key={optIndex} value={option}>
+                                        {option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="text"
+                                    className="text-input"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onBlur={stopEditing}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') stopEditing();
+                                      if (e.key === 'Escape') cancelEditing();
+                                    }}
+                                    placeholder="Or type custom value..."
+                                  />
+                                </div>
+                              ) : (
+                                <div 
+                                  className="editable-cell"
+                                  onClick={() => startEditing(rowIndex, cellIndex, row[cellIndex])}
+                                  title="Click to edit category"
+                                >
+                                  {row[cellIndex] || <span className="empty-value">-- Not Set --</span>}
+                                  <span className="edit-icon">▼</span>
+                                </div>
+                              )
+                            ) : (
+                              <span title={row[cellIndex] || ''}>
+                                {row[cellIndex] || ''}
+                              </span>
+                            )}
+                          </td>
+                        )
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="pagination">
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="pagination-button"
+            >
+              Previous
+            </button>
+            <span className="pagination-info">
+              Page {currentPage} of {totalPages} 
+              ({filteredAndSortedData.length} records)
+            </span>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="pagination-button"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TEMPORARY DEBUG SECTION - shows actual data structure */}
+      {excelData.length > 0 && (
+        <div style={{
+          margin: '20px 0',
+          padding: '15px',
+          background: '#f0f0f0',
+          border: '1px solid #ccc',
+          borderRadius: '5px',
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          <h4>🔍 DEBUG: Data Structure Analysis</h4>
+          <div><strong>Headers ({headers.length} columns):</strong> {JSON.stringify(headers)}</div>
+          <div><strong>Total Rows:</strong> {excelData.length}</div>
+          <div><strong>First Row Data:</strong> {JSON.stringify(excelData[0])}</div>
+          <div><strong>Second Row Data:</strong> {JSON.stringify(excelData[1])}</div>
+          <div><strong>Filtered Data Length:</strong> {filteredAndSortedData?.length || 'undefined'}</div>
+          <div><strong>Paginated Data Length:</strong> {paginatedData?.length || 'undefined'}</div>
+          {paginatedData && paginatedData.length > 0 && (
+            <div><strong>First Paginated Row:</strong> {JSON.stringify(paginatedData[0])}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NBLList;

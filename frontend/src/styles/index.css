@@ -1,0 +1,8 @@
+/* Import all stylesheets */
+@import './global.css';
+@import './buttons.css';
+@import './forms.css';
+@import './tables.css';
+@import './dashboard.css';
+@import './nbl-list.css';
+@import './navbar.css';

@@ -130,6 +130,24 @@ router.post('/upload', async (req, res) => {
 
     console.log(`Processing upload: ${data.length} records from file "${fileName}"`);
 
+    // Filter out records that are mostly empty (more than 50% empty values)
+    const filteredData = data.filter(record => {
+      const values = Object.values(record);
+      const nonEmptyValues = values.filter(value => 
+        value !== null && 
+        value !== undefined && 
+        value !== '' && 
+        value.toString().trim() !== ''
+      );
+      
+      // Keep records that have at least 50% non-empty values
+      const nonEmptyPercentage = (nonEmptyValues.length / values.length) * 100;
+      console.log(`Record has ${nonEmptyPercentage.toFixed(1)}% non-empty values`);
+      return nonEmptyPercentage >= 50;
+    });
+
+    console.log(`Filtered ${data.length} records down to ${filteredData.length} quality records`);
+
     // First, remove all existing records
     nblListDB.remove({}, { multi: true }, (err, numRemoved) => {
       if (err) {
@@ -143,17 +161,30 @@ router.post('/upload', async (req, res) => {
 
       console.log(`Removed ${numRemoved} existing NBL records`);
 
-      // Prepare new records with metadata
+      // Prepare new records with metadata and clean empty values
       const uploadTimestamp = new Date().toISOString();
-      const recordsToInsert = data.map((record, index) => ({
-        ...record,
-        _uploadInfo: {
-          fileName: fileName || 'unknown',
-          uploadTimestamp,
-          originalIndex: index,
-          headers: headers || []
-        }
-      }));
+      const recordsToInsert = filteredData.map((record, index) => {
+        // Clean the record by converting empty values to null or removing them
+        const cleanedRecord = {};
+        Object.keys(record).forEach(key => {
+          const value = record[key];
+          if (value !== null && value !== undefined && value !== '' && value.toString().trim() !== '') {
+            cleanedRecord[key] = value;
+          } else {
+            cleanedRecord[key] = null; // Use null instead of empty string for better data quality
+          }
+        });
+
+        return {
+          ...cleanedRecord,
+          _uploadInfo: {
+            fileName: fileName || 'unknown',
+            uploadTimestamp,
+            originalIndex: index,
+            headers: headers || []
+          }
+        };
+      });
 
       console.log('Sample record to insert:', JSON.stringify(recordsToInsert[0], null, 2));
 

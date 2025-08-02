@@ -7,6 +7,9 @@ require('dotenv').config();
 
 const resourceRoutes = require('./routes/resources');
 const nblListRoutes = require('./routes/nblList');
+const allocationDataRoutes = require('./routes/allocationData');
+const newAllocationsRoutes = require('./routes/newAllocations');
+const resourceEvaluationsRoutes = require('./routes/resourceEvaluations');
 const { router: emailRoutes, setEmailService } = require('./routes/email');
 const emailListRoutes = require('./routes/emailList');
 const EmailService = require('./services/emailService');
@@ -37,6 +40,9 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 // Routes
 app.use('/api/resources', resourceRoutes);
 app.use('/api/nbl-list', nblListRoutes);
+app.use('/api/allocation-data', allocationDataRoutes);
+app.use('/api/new-allocations', newAllocationsRoutes);
+app.use('/api/resource-evaluations', resourceEvaluationsRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/email-list', emailListRoutes);
 

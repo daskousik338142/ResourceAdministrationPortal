@@ -68,39 +68,14 @@ const Navbar = () => {
             <span className="menu-icon-item">🏠</span>
             Home
           </Link>
-          
-          {/* Dashboard with submenu */}
-          <div className="nav-menu-item">
-            <div 
-              className={`nav-link expandable ${expandedMenus.dashboard ? 'expanded' : ''}`}
-              onClick={() => toggleSubmenu('dashboard')}
-            >
-              <span className="menu-icon-item">📊</span>
-              <span className="menu-text">Dashboard</span>
-              <span className="submenu-arrow">{expandedMenus.dashboard ? '▼' : '▶'}</span>
-            </div>
-            {expandedMenus.dashboard && (
-              <div className="submenu">
-                <Link 
-                  to="/dashboard" 
-                  className={`nav-link submenu-link ${isActive('/dashboard') ? 'active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  <span className="submenu-icon">📈</span>
-                  NBL Dashboard
-                </Link>
-                <Link 
-                  to="/resource-allocation-dashboard" 
-                  className={`nav-link submenu-link ${isActive('/resource-allocation-dashboard') ? 'active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  <span className="submenu-icon">📊</span>
-                  Resource Allocation Dashboard
-                </Link>
-              </div>
-            )}
-          </div>
-          
+          <Link 
+            to="/dashboard" 
+            className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            <span className="menu-icon-item">📊</span>
+            Dashboard
+          </Link>
           <Link 
             to="/nbl-list" 
             className={`nav-link ${isActive('/nbl-list') ? 'active' : ''}`}
@@ -141,15 +116,6 @@ const Navbar = () => {
               </div>
             )}
           </div>
-          
-          <Link 
-            to="/resource-evaluation" 
-            className={`nav-link ${isActive('/resource-evaluation') ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            <span className="menu-icon-item">🔍</span>
-            Resource Evaluation
-          </Link>
           
           <Link 
             to="/admin" 

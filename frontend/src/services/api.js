@@ -232,6 +232,74 @@ class ApiService {
     }
   }
 
+  // Allocation Data endpoints
+  getAllocationData() {
+    return this.api.get('/allocation-data');
+  }
+
+  uploadAllocationData(data, fileName, headers) {
+    return this.api.post('/allocation-data/upload', {
+      data,
+      fileName,
+      headers
+    });
+  }
+
+  getAllocationDataStats() {
+    return this.api.get('/allocation-data/stats');
+  }
+
+  clearAllocationData() {
+    return this.api.delete('/allocation-data/clear');
+  }
+
+  saveAllocationHeaders(headers) {
+    return this.api.post('/allocation-data/headers', { headers });
+  }
+
+  // New Allocations endpoints
+  getNewAllocations() {
+    return this.api.get('/new-allocations');
+  }
+
+  uploadNewAllocations(data, fileName, headers) {
+    return this.api.post('/new-allocations/upload', {
+      data,
+      fileName,
+      headers
+    });
+  }
+
+  getNewAllocationsStats() {
+    return this.api.get('/new-allocations/stats');
+  }
+
+  clearNewAllocations() {
+    return this.api.delete('/new-allocations/clear');
+  }
+
+  saveNewAllocationsHeaders(headers) {
+    return this.api.post('/new-allocations/headers', { headers });
+  }
+
+  // Allocation Data Analytics endpoints
+  getAllocationDataBillableAnalytics() {
+    return this.api.get('/allocation-data/analytics/billable');
+  }
+
+  getAllocationDataGradeAnalytics() {
+    return this.api.get('/allocation-data/analytics/grades');
+  }
+
+  // New Allocations Analytics endpoints
+  getNewAllocationsBillableAnalytics() {
+    return this.api.get('/new-allocations/analytics/billable');
+  }
+
+  getNewAllocationsGradeAnalytics() {
+    return this.api.get('/new-allocations/analytics/grades');
+  }
+
   // NBL List headers endpoints
   getSavedHeaders() {
     return this.api.get('/nbl-list/headers');
@@ -242,4 +310,5 @@ class ApiService {
   }
 }
 
-export default new ApiService();
+const apiService = new ApiService();
+export default apiService;

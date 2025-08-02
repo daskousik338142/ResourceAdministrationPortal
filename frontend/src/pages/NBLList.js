@@ -45,7 +45,20 @@ const NBLList = () => {
         
         // Convert records back to array format for compatibility with existing code
         const dataRows = records.map(record => {
-          return headerRow.map(header => record[header]);
+          return headerRow.map(header => {
+            const value = record[header];
+            // Handle null/undefined values better - display as empty string but maintain data quality
+            return (value === null || value === undefined) ? '' : value;
+          });
+        });
+        
+        // Filter out rows that are mostly empty (optional additional filtering)
+        const qualityDataRows = dataRows.filter(row => {
+          const nonEmptyValues = row.filter(cell => 
+            cell !== null && cell !== undefined && cell !== '' && cell.toString().trim() !== ''
+          );
+          // Keep rows that have at least 15% non-empty values (less aggressive)
+          return (nonEmptyValues.length / row.length) >= 0.15;
         });
         
         // Store record IDs for backend updates
@@ -53,7 +66,7 @@ const NBLList = () => {
         setRecordIds(ids);
         
         setHeaders(headerRow);
-        setExcelData(dataRows);
+        setExcelData(qualityDataRows); // Use filtered data instead of all data
         
         // Set filename from upload info if available
         if (records[0]._uploadInfo) {
@@ -140,15 +153,28 @@ const NBLList = () => {
 
         if (jsonData.length > 0) {
           const headerRow = jsonData[0];
-          const dataRows = jsonData.slice(1).filter(row => 
-            row.some(cell => cell !== null && cell !== undefined && cell !== '')
-          );
+          const dataRows = jsonData.slice(1).filter(row => {
+            // Less aggressive filtering: row must have at least 15% non-empty values
+            const nonEmptyValues = row.filter(cell => 
+              cell !== null && 
+              cell !== undefined && 
+              cell !== '' && 
+              cell.toString().trim() !== ''
+            );
+            return (nonEmptyValues.length / row.length) >= 0.15;
+          });
           
           // Convert dataRows to object format for backend storage
           const recordsForBackend = dataRows.map(row => {
             const record = {};
             headerRow.forEach((header, index) => {
-              record[header] = row[index] || '';
+              const value = row[index];
+              // Only set non-empty values, leave empty values as empty string
+              if (value !== null && value !== undefined && value !== '' && value.toString().trim() !== '') {
+                record[header] = value;
+              } else {
+                record[header] = ''; // Use empty string instead of null
+              }
             });
             return record;
           });

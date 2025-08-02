@@ -23,12 +23,20 @@ class Database {
       autoload: true
     });
 
+    this.resourceEvaluations = new Datastore({
+      filename: path.join(__dirname, '../data/resource_evaluations.db'),
+      autoload: true
+    });
+
     // Create indexes
     this.users.ensureIndex({ fieldName: 'email', unique: true });
     this.resources.ensureIndex({ fieldName: 'name' });
     this.bookings.ensureIndex({ fieldName: 'resourceId' });
     this.bookings.ensureIndex({ fieldName: 'userId' });
     this.nblList.ensureIndex({ fieldName: 'uploadTimestamp' });
+    this.resourceEvaluations.ensureIndex({ fieldName: 'resourceId' });
+    this.resourceEvaluations.ensureIndex({ fieldName: 'evaluationDate' });
+    this.resourceEvaluations.ensureIndex({ fieldName: 'status' });
   }
 
   getResourcesDB() {
@@ -45,6 +53,10 @@ class Database {
 
   getNBLListDB() {
     return this.nblList;
+  }
+
+  getResourceEvaluationsDB() {
+    return this.resourceEvaluations;
   }
 }
 

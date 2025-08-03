@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { format, parse, isValid } from 'date-fns';
 import api from '../services/api';
 import '../styles/nbl-list.css';
 
@@ -20,6 +21,60 @@ const NBLList = () => {
   const [lastSaved, setLastSaved] = useState(null);
   const [recordIds, setRecordIds] = useState([]);
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+
+  // Helper function to check if a column contains dates
+  const isDateColumn = (header) => {
+    if (!header) return false;
+    const lowerHeader = header.toLowerCase();
+    return lowerHeader.includes('assignment start date') || 
+           lowerHeader.includes('billable') || 
+           lowerHeader.includes('release date') ||
+           lowerHeader === 'assignment start date' ||
+           lowerHeader === 'billable/ release date(mm/dd/yyyy)';
+  };
+
+  // Helper function to check if a column is NBL Category
+  const isNBLCategoryColumn = (header) => {
+    if (!header) return false;
+    const lowerHeader = header.toLowerCase();
+    return lowerHeader === 'nbl category';
+  };
+
+  // NBL Category dropdown options
+  const nblCategoryOptions = [
+    'NBL for the month',
+    'Awaiting billing', 
+    'Billed',
+    'NBL'
+  ];
+
+  // Helper function to convert MM/DD/YYYY to YYYY-MM-DD for date input
+  const convertToDateInputFormat = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
+      if (isValid(parsedDate)) {
+        return format(parsedDate, 'yyyy-MM-dd');
+      }
+    } catch (error) {
+      console.warn('Error converting date:', dateStr, error);
+    }
+    return '';
+  };
+
+  // Helper function to convert YYYY-MM-DD to MM/DD/YYYY
+  const convertFromDateInputFormat = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const parsedDate = parse(dateStr, 'yyyy-MM-dd', new Date());
+      if (isValid(parsedDate)) {
+        return format(parsedDate, 'MM/dd/yyyy');
+      }
+    } catch (error) {
+      console.warn('Error converting date:', dateStr, error);
+    }
+    return '';
+  };
 
   // Function to load existing data from backend
   const loadExistingData = async () => {
@@ -104,6 +159,64 @@ const NBLList = () => {
     }
   };
 
+  // Reload data from database after upload
+  const reloadDataFromDatabase = async () => {
+    try {
+      const response = await api.getNBLList();
+
+      if (response.data.success && response.data.data.length > 0) {
+        const records = response.data.data;
+        
+        // Extract headers from the first record's upload info or from object keys
+        let headerRow = [];
+        if (records[0]._uploadInfo && records[0]._uploadInfo.headers) {
+          headerRow = records[0]._uploadInfo.headers;
+        } else {
+          // Fallback: extract headers from object keys (excluding metadata)
+          headerRow = Object.keys(records[0]).filter(key => 
+            !key.startsWith('_') && key !== 'uploadTimestamp'
+          );
+        }
+        
+        // Convert records back to array format for display
+        const dataRows = records.map(record => {
+          return headerRow.map(header => record[header] || '');
+        });
+        
+        // Store record IDs for backend updates
+        const ids = records.map(record => record._id);
+        setRecordIds(ids);
+        
+        setHeaders(headerRow);
+        setExcelData(dataRows);
+        
+        // Set filename from upload info if available
+        if (records[0]._uploadInfo) {
+          setFileName(records[0]._uploadInfo.fileName);
+          setLastSaved(new Date(records[0]._uploadInfo.uploadTimestamp).toLocaleString());
+        }
+        
+        // Update column visibility
+        const initialVisibility = {};
+        headerRow.forEach((header, index) => {
+          initialVisibility[index] = true;
+        });
+        setVisibleColumns(initialVisibility);
+        
+        // Update column filters
+        const initialFilters = {};
+        headerRow.forEach((header, index) => {
+          initialFilters[index] = '';
+        });
+        setColumnFilters(initialFilters);
+        
+        console.log(`Reloaded ${records.length} records from database`);
+      }
+    } catch (error) {
+      console.error('Error reloading data from database:', error);
+    }
+  };
+
   // Load existing data on component mount
   useEffect(() => {
     loadExistingData();
@@ -153,7 +266,7 @@ const NBLList = () => {
             return record;
           });
 
-          // Send data to backend
+          // Send data to backend and reload from database
           const uploadData = async () => {
             try {
               const response = await api.uploadNBLData(recordsForBackend, file.name, headerRow);
@@ -161,6 +274,10 @@ const NBLList = () => {
               if (response.data.success) {
                 console.log('Data uploaded successfully to backend');
                 setLastSaved(new Date().toLocaleString());
+                
+                // After successful upload, reload data from database to ensure consistency
+                await reloadDataFromDatabase();
+                
               } else {
                 console.error('Backend upload failed:', response.data.message);
                 alert('Failed to save data to server: ' + response.data.message);
@@ -176,27 +293,8 @@ const NBLList = () => {
           // Save headers to backend for future use
           saveHeadersToBackend(headerRow);
           
-          setHeaders(headerRow);
-          setExcelData(dataRows);
-          setFileName(file.name);
-          
-          // Initialize column visibility
-          const initialVisibility = {};
-          headerRow.forEach((header, index) => {
-            initialVisibility[index] = true;
-          });
-          setVisibleColumns(initialVisibility);
-          
-          // Initialize column filters
-          const initialFilters = {};
-          headerRow.forEach((header, index) => {
-            initialFilters[index] = '';
-          });
-          setColumnFilters(initialFilters);
-          
-          setCurrentPage(1);
-          setSearchTerm('');
-          setSortConfig({ column: null, direction: null });
+          // Don't set local state here - let reloadDataFromDatabase handle it
+          // This ensures data consistency with what's actually stored in the database
         }
       } catch (error) {
         console.error('Error reading file:', error);
@@ -349,14 +447,26 @@ const NBLList = () => {
     const actualRowIndex = (currentPage - 1) * recordsPerPage + rowIndex;
     const currentValue = excelData[actualRowIndex]?.[cellIndex] || '';
     setEditingCell({ row: rowIndex, col: cellIndex, actualRow: actualRowIndex });
-    setEditingValue(currentValue);
+    
+    // If it's a date column, convert to date input format
+    if (isDateColumn(headers[cellIndex])) {
+      setEditingValue(convertToDateInputFormat(currentValue));
+    } else {
+      setEditingValue(currentValue);
+    }
   };
 
   const stopEditing = async () => {
     if (editingCell) {
       const newData = [...excelData];
       if (newData[editingCell.actualRow]) {
-        newData[editingCell.actualRow][editingCell.col] = editingValue;
+        // Convert date value back to MM/DD/YYYY format if it's a date column
+        let valueToStore = editingValue;
+        if (isDateColumn(headers[editingCell.col])) {
+          valueToStore = convertFromDateInputFormat(editingValue);
+        }
+        
+        newData[editingCell.actualRow][editingCell.col] = valueToStore;
         setExcelData(newData);
         
         // Update backend
@@ -655,8 +765,129 @@ const NBLList = () => {
                                 width: columnWidths[cellIndex] ? `${columnWidths[cellIndex]}px` : 'auto',
                                 minWidth: columnWidths[cellIndex] ? `${columnWidths[cellIndex]}px` : 'fit-content'
                               }}
+                              onClick={() => (isDateColumn(headers[cellIndex]) || isNBLCategoryColumn(headers[cellIndex])) ? startEditing(rowIndex, cellIndex) : null}
                             >
-                              {row[cellIndex] || ''}
+                              {editingCell && 
+                               editingCell.row === rowIndex && 
+                               editingCell.col === cellIndex ? (
+                                <div className="cell-editor">
+                                  {isDateColumn(headers[cellIndex]) ? (
+                                    <input
+                                      type="date"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={stopEditing}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          stopEditing();
+                                        } else if (e.key === 'Escape') {
+                                          cancelEditing();
+                                        }
+                                      }}
+                                      className="date-input-editor"
+                                      autoFocus
+                                    />
+                                  ) : isNBLCategoryColumn(headers[cellIndex]) ? (
+                                    <select
+                                      value={editingValue}
+                                      onChange={async (e) => {
+                                        const newValue = e.target.value;
+                                        console.log('NBL Category dropdown changed to:', newValue);
+                                        console.log('Current editing cell:', editingCell);
+                                        console.log('Record IDs array:', recordIds);
+                                        
+                                        setEditingValue(newValue);
+                                        
+                                        // Immediately save the change
+                                        if (editingCell) {
+                                          const actualRowIndex = editingCell.actualRow;
+                                          const recordId = recordIds[actualRowIndex];
+                                          console.log('Updating record ID:', recordId, 'at row index:', actualRowIndex);
+                                          
+                                          if (!recordId) {
+                                            console.error('No record ID found for row:', actualRowIndex);
+                                            alert('Error: Cannot save - no record ID found');
+                                            return;
+                                          }
+                                          
+                                          const newData = [...excelData];
+                                          if (newData[actualRowIndex]) {
+                                            newData[actualRowIndex][editingCell.col] = newValue;
+                                            setExcelData(newData);
+                                            
+                                            // Update backend
+                                            try {
+                                              const updatedRecord = {};
+                                              headers.forEach((header, index) => {
+                                                updatedRecord[header] = newData[actualRowIndex][index];
+                                              });
+                                              
+                                              console.log('Sending update to backend:', updatedRecord);
+                                              const response = await api.updateNBLRecord(recordId, updatedRecord);
+                                              console.log('Backend response:', response);
+                                              
+                                              setLastSaved(new Date().toLocaleString());
+                                              console.log('NBL Category updated successfully:', newValue);
+                                            } catch (error) {
+                                              console.error('Error updating NBL Category:', error);
+                                              alert('Failed to save NBL Category change to server: ' + error.message);
+                                            }
+                                          }
+                                        }
+                                        
+                                        // Close the editor after a short delay
+                                        setTimeout(() => {
+                                          setEditingCell(null);
+                                          setEditingValue('');
+                                        }, 150);
+                                      }}
+                                      onBlur={() => {
+                                        setEditingCell(null);
+                                        setEditingValue('');
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                          cancelEditing();
+                                        }
+                                      }}
+                                      className="nbl-category-dropdown"
+                                      autoFocus
+                                    >
+                                      {nblCategoryOptions.map((option, idx) => (
+                                        <option key={idx} value={option}>
+                                          {option}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={stopEditing}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          stopEditing();
+                                        } else if (e.key === 'Escape') {
+                                          cancelEditing();
+                                        }
+                                      }}
+                                      className="text-input-editor"
+                                      autoFocus
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className={`cell-content ${isDateColumn(headers[cellIndex]) ? 'date-cell clickable' : ''} ${isNBLCategoryColumn(headers[cellIndex]) ? 'nbl-category-cell clickable' : ''}`}>
+                                  <span className="cell-value">{row[cellIndex] || ''}</span>
+                                  {isDateColumn(headers[cellIndex]) && (
+                                    <span className="edit-indicator date-indicator">📅</span>
+                                  )}
+                                  {isNBLCategoryColumn(headers[cellIndex]) && (
+                                    <span className="edit-indicator pencil-indicator">✏️</span>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           )
                         )}

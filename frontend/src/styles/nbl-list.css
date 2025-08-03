@@ -1641,15 +1641,311 @@
   font-style: italic;
 }
 
-/* No Data Row */
-.no-data-row {
-  background: #f8f9fa !important;
+/* Date Picker Cell Editing Styles */
+.cell-content {
+  position: relative;
+  padding: 0.25rem 0.5rem;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.no-data-cell {
-  text-align: center !important;
-  font-style: italic;
-  color: #6b7280 !important;
-  padding: 2rem 1rem !important;
-  font-size: 0.875rem !important;
+.cell-content.date-cell {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cell-content.date-cell:hover {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+}
+
+.cell-content.clickable:hover .edit-indicator {
+  opacity: 1;
+}
+
+.edit-indicator {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-left: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.cell-editor {
+  width: 100%;
+  padding: 0.25rem;
+}
+
+.date-input-editor,
+.text-input-editor {
+  width: 100%;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  background-color: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.date-input-editor {
+  min-width: 140px;
+}
+
+.date-input-editor:focus,
+.text-input-editor:focus {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-input-editor:invalid {
+  border-color: #ef4444;
+}
+
+/* Table cell modifications for date editing */
+.table-cell {
+  position: relative;
+  padding: 0 !important; /* Remove default padding for better editor display */
+}
+
+.table-cell .cell-content {
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  height: 100%;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive adjustments for date picker */
+@media (max-width: 768px) {
+  .date-input-editor {
+    min-width: 120px;
+    font-size: 0.8rem;
+  }
+  
+  .edit-indicator {
+    font-size: 0.7rem;
+  }
+}
+
+/* Enhanced visual feedback for editable date cells */
+.date-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #3b82f6;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.date-cell:hover::before {
+  opacity: 1;
+}
+
+/* Tooltip for date cells */
+.date-cell {
+  position: relative;
+}
+
+.date-cell:hover::after {
+  content: 'Click to edit date';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  animation: fadeIn 0.3s ease 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* NBL Category Dropdown Styles */
+.nbl-category-cell {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nbl-category-cell:hover {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+}
+
+.nbl-category-dropdown {
+  width: 100%;
+  border: 2px solid #10b981;
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  background-color: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.nbl-category-dropdown:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.nbl-category-dropdown option {
+  padding: 0.5rem;
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+.nbl-category-dropdown option:hover {
+  background-color: #f3f4f6;
+}
+
+/* Enhanced visual feedback for editable NBL Category cells */
+.nbl-category-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #10b981;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.nbl-category-cell:hover::before {
+  opacity: 1;
+}
+
+/* Tooltip for NBL Category cells */
+.nbl-category-cell:hover::after {
+  content: 'Click to edit category';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  animation: fadeIn 0.3s ease 0.5s forwards;
+}
+
+/* Pencil icon styling */
+.edit-indicator {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cell-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  padding-right: 24px; /* Make room for the icon */
+}
+
+.cell-value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date-cell .cell-value,
+.nbl-category-cell .cell-value {
+  padding-right: 4px; /* Extra spacing for editable cells */
+}
+
+.date-indicator,
+.pencil-indicator {
+  flex-shrink: 0;
+}
+
+.nbl-category-cell .edit-indicator {
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.nbl-category-cell:hover .edit-indicator {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+  transition: all 0.2s ease;
+}
+
+.date-cell .edit-indicator {
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.date-cell:hover .edit-indicator {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Color coding for different NBL categories */
+.cell-content[data-category="NBL for the month"] {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+.cell-content[data-category="Awaiting billing"] {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid #f59e0b;
+}
+
+.cell-content[data-category="Billed"] {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-left: 3px solid #10b981;
+}
+
+.cell-content[data-category="NBL"] {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+}
+
+/* Responsive adjustments for dropdown */
+@media (max-width: 768px) {
+  .nbl-category-dropdown {
+    min-width: 140px;
+    font-size: 0.8rem;
+  }
+  
+  .nbl-category-cell .edit-indicator,
+  .date-cell .edit-indicator {
+    font-size: 0.7rem;
+  }
+  
+  .cell-content {
+    padding-right: 20px; /* Slightly smaller padding on mobile */
+  }
 }

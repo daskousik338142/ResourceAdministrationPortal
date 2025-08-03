@@ -615,6 +615,31 @@
   background: #f3f4f6;
 }
 
+.summary-table tr.genc-row {
+  background: #dbeafe !important; /* Light blue background for GenC */
+}
+
+.summary-table tr.genc-row:hover {
+  background: #bfdbfe !important; /* Slightly darker blue on hover */
+}
+
+.summary-table tr.non-genc-row {
+  background: #dbeafe !important; /* Light blue background for Non-GenC */
+}
+
+.summary-table tr.non-genc-row:hover {
+  background: #bfdbfe !important; /* Slightly darker blue on hover */
+}
+
+.summary-table tr.total-row {
+  background: #f3f4f6;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.summary-table tr.total-row:hover {
+  background: #e5e7eb;
+}
+
 .summary-table tr.sub-row {
   background: white;
 }
@@ -629,6 +654,24 @@
 
 .summary-table tr.sub-sub-row:hover {
   background: #f5f5f5;
+}
+
+.summary-table tr.separator-row {
+  background: #f8f9fa;
+  border-top: 2px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-table tr.separator-row:hover {
+  background: #f8f9fa;
+}
+
+.separator-cell {
+  padding: 12px 16px !important;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .category-name {
@@ -646,9 +689,17 @@
 .sub-sub-category {
   color: #9ca3af;
   font-weight: 400;
-  padding-left: 48px;
+  padding-left: 80px; /* Reduced padding since we removed icons */
   font-style: italic;
   font-size: 0.9rem;
+}
+
+.sub-sub-sub-category {
+  color: #9ca3af;
+  font-weight: 400;
+  padding-left: 120px; /* Extra indentation for NBL for Month subcategories */
+  font-style: italic;
+  font-size: 0.85rem;
 }
 
 .count-value {
@@ -810,6 +861,104 @@
   cursor: not-allowed;
 }
 
+/* NBL Category Cards Section */
+.category-cards-section {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.category-cards-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.category-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.category-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #6b7280;
+  transition: all 0.2s ease;
+}
+
+.category-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.category-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.category-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-count {
+  background: #6b7280;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 35px;
+  text-align: center;
+}
+
+.category-stats {
+  margin-top: 12px;
+}
+
+.percentage-bar {
+  width: 100%;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.percentage-fill {
+  height: 100%;
+  background: #6b7280;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.category-percentage {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .dashboard-container {
@@ -884,5 +1033,25 @@
   
   .sub-category {
     padding-left: 20px;
+  }
+  
+  .category-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .category-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .category-card {
+    padding: 16px;
+  }
+  
+  .category-header h3 {
+    font-size: 0.95rem;
   }
 }

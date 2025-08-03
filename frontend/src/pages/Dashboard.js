@@ -6,16 +6,11 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categoryRecords, setCategoryRecords] = useState([]);
-  const [recordsLoading, setRecordsLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [breakdownData, setBreakdownData] = useState(null);
   const [emailSending, setEmailSending] = useState(false);
 
   useEffect(() => {
     fetchStats();
-    fetchBreakdown();
   }, []);
 
   const fetchStats = async () => {
@@ -27,6 +22,9 @@ const Dashboard = () => {
       if (response.data.success) {
         setStats(response.data.data);
         console.log('Stats data:', response.data.data);
+        
+        // Fetch actual records to calculate detailed breakdown
+        await fetchDetailedBreakdown(response.data.data);
       } else {
         setError('Failed to fetch statistics');
       }
@@ -38,75 +36,157 @@ const Dashboard = () => {
     }
   };
 
-  const fetchBreakdown = async () => {
+  const fetchDetailedBreakdown = async (statsData) => {
     try {
-      console.log('Fetching breakdown data...');
-      const response = await api.getNBLBreakdown();
-      console.log('Breakdown response:', response.data);
-      if (response.data.success) {
-        setBreakdownData(response.data.data);
-        console.log('Breakdown data:', response.data.data);
+      console.log('Fetching detailed records for breakdown...');
+      const response = await api.getNBLList();
+      
+      if (response.data.success && response.data.data.length > 0) {
+        const records = response.data.data;
+        const calculatedBreakdown = calculateDetailedBreakdownFromRecords(records, statsData);
+        setBreakdownData(calculatedBreakdown);
+      } else {
+        // Fallback to simple calculation if no records
+        const calculatedBreakdown = calculateBreakdownFromStats(statsData);
+        setBreakdownData(calculatedBreakdown);
       }
     } catch (err) {
-      console.error('Error fetching breakdown data:', err);
+      console.error('Error fetching detailed breakdown:', err);
+      // Fallback to simple calculation
+      const calculatedBreakdown = calculateBreakdownFromStats(statsData);
+      setBreakdownData(calculatedBreakdown);
     }
   };
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'NBL': '#ef4444', // red
-      'Awaiting Billing': '#f59e0b', // amber
-      'NBL for month': '#3b82f6', // blue
-      'Billed': '#10b981', // emerald
-    };
-    return colors[category] || '#6b7280'; // gray for unknown categories
-  };
-
-  const getCategoryDescription = (category) => {
-    const descriptions = {
-      'NBL': 'Non-billable resources not assigned to client projects',
-      'Awaiting Billing': 'Resources pending billing processing and approval',
-      'NBL for month': 'Monthly non-billable allocations and assignments',
-      'Billed': 'Successfully billed resources with completed transactions',
-    };
-    return descriptions[category] || 'Resource category requiring classification';
-  };
-
-  const handleCategoryClick = async (categoryName) => {
-    try {
-      setRecordsLoading(true);
-      setSelectedCategory(categoryName);
-      setShowModal(true);
+  const calculateDetailedBreakdownFromRecords = (records, statsData) => {
+    const totalRecords = records.length;
+    const categoryStats = statsData.categoryStats || {};
+    
+    let gencPaCount = 0;
+    let nonGencCount = 0;
+    let billedCount = 0;
+    let awaitingBillingCount = 0;
+    let nblForMonthCount = 0;
+    let nblCount = 0;
+    
+    // NBL for Month secondary breakdown by NBL Secondary Category
+    let nblForMonthAwaitingBilling = 0;
+    let nblForMonthMarkedForRelease = 0;
+    let nblForMonthMLReturn = 0;
+    
+    const secondaryCategories = {};
+    
+    records.forEach(record => {
+      const nblCategory = record['NBL Category'] || '';
+      const secondaryStateTag = record['Secondary State Tag'] || '';
+      const nblSecondaryCategory = record['NBL Secondary Category'] || '';
       
-      console.log('Fetching records for category:', categoryName);
-      const response = await api.getNBLRecordsByCategory(categoryName);
-      
-      if (response.data.success) {
-        setCategoryRecords(response.data.data.records);
-        console.log('Category records:', response.data.data.records);
+      // Count secondary categories
+      if (secondaryStateTag && secondaryStateTag.trim() && secondaryStateTag !== '0') {
+        secondaryCategories[secondaryStateTag] = (secondaryCategories[secondaryStateTag] || 0) + 1;
+        
+        // Determine if this is GenC or Non-GenC based on secondary category
+        // GenC categories include "GenC" in the name
+        const isGenC = secondaryStateTag.toLowerCase().includes('genc');
+        
+        if (isGenC) {
+          gencPaCount++;
+        } else {
+          nonGencCount++;
+        }
       } else {
-        console.error('Failed to fetch category records');
-        setCategoryRecords([]);
+        // If no secondary category, assume Non-GenC
+        nonGencCount++;
       }
-    } catch (error) {
-      console.error('Error fetching category records:', error);
-      setCategoryRecords([]);
-    } finally {
-      setRecordsLoading(false);
-    }
+      
+      // Count primary NBL categories
+      const normalizedCategory = nblCategory.trim().toLowerCase();
+      if (normalizedCategory.includes('billed')) {
+        billedCount++;
+      } else if (normalizedCategory.includes('awaiting') && normalizedCategory.includes('bill')) {
+        awaitingBillingCount++;
+      } else if (normalizedCategory.includes('nbl for') && normalizedCategory.includes('month')) {
+        nblForMonthCount++;
+        
+        // For NBL for Month, break down by NBL Secondary Category
+        if (nblSecondaryCategory && nblSecondaryCategory.trim()) {
+          const secondaryLower = nblSecondaryCategory.toLowerCase().trim();
+          console.log('NBL for Month record:', {
+            nblCategory,
+            nblSecondaryCategory,
+            secondaryLower
+          });
+          
+          if (secondaryLower.includes('awaiting') && secondaryLower.includes('bill')) {
+            nblForMonthAwaitingBilling++;
+            console.log('Found NBL for Month - Awaiting Billing:', nblSecondaryCategory);
+          } else if (secondaryLower === 'release' || (secondaryLower.includes('marked') && secondaryLower.includes('release'))) {
+            nblForMonthMarkedForRelease++;
+            console.log('Found NBL for Month - Marked for Release:', nblSecondaryCategory);
+          } else if (secondaryLower.includes('ml') && secondaryLower.includes('return')) {
+            nblForMonthMLReturn++;
+            console.log('Found NBL for Month - ML Return:', nblSecondaryCategory);
+          } else {
+            console.log('NBL for Month - Other secondary category (not counted):', nblSecondaryCategory);
+          }
+        }
+      } else if (normalizedCategory === 'nbl') {
+        nblCount++;
+      }
+    });
+    
+    console.log('NBL for Month breakdown:', {
+      awaitingBilling: nblForMonthAwaitingBilling,
+      markedForRelease: nblForMonthMarkedForRelease,
+      mlReturn: nblForMonthMLReturn
+    });
+    
+    return {
+      totalRecords,
+      gencPaCount,
+      nonGencCount,
+      billedCount,
+      awaitingBillingCount,
+      nblForMonthCount,
+      nblCount,
+      categoryBreakdown: categoryStats,
+      secondaryCategories,
+      // NBL for Month secondary breakdown
+      nblForMonthBreakdown: {
+        awaitingBilling: nblForMonthAwaitingBilling,
+        markedForRelease: nblForMonthMarkedForRelease,
+        mlReturn: nblForMonthMLReturn
+      }
+    };
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedCategory(null);
-    setCategoryRecords([]);
-  };
-
-  const handleModalClick = (e) => {
-    // Close modal if clicking on overlay (not on modal content)
-    if (e.target.classList.contains('modal-overlay')) {
-      closeModal();
-    }
+  const calculateBreakdownFromStats = (statsData) => {
+    const categoryStats = statsData.categoryStats || {};
+    const totalRecords = statsData.totalRecords || 0;
+    
+    // Calculate breakdown based on NBL categories
+    const billedCount = categoryStats['Billed'] || 0;
+    const awaitingBillingCount = categoryStats['Awaiting billing'] || 0;
+    const nblForMonthCount = categoryStats['NBL for the month'] || categoryStats['NBL for month'] || 0;
+    const nblCount = categoryStats['NBL'] || 0;
+    
+    // For now, we'll use a simple calculation for GenC vs Non-GenC
+    // This should be updated when we have secondary category data
+    const nonGencCount = billedCount + awaitingBillingCount + nblForMonthCount + nblCount;
+    const gencPaCount = Math.max(0, totalRecords - nonGencCount);
+    
+    return {
+      totalRecords,
+      gencPaCount,
+      nonGencCount,
+      billedCount,
+      awaitingBillingCount,
+      nblForMonthCount,
+      nblCount,
+      categoryBreakdown: categoryStats,
+      // We'll need to get this from the actual data
+      secondaryCategories: {}
+    };
   };
 
   const handleSendSummaryEmails = async () => {
@@ -178,61 +258,42 @@ const Dashboard = () => {
                 <p className="stat-number">{stats?.totalRecords || 0}</p>
               </div>
             </div>
-
-            {stats?.categoryStats && Object.keys(stats.categoryStats).length > 0 && (
-              <div className="stat-card categories-count">
-                <div className="stat-icon">�</div>
-                <div className="stat-content">
-                  <h3>Categories</h3>
-                  <p className="stat-number">{Object.keys(stats.categoryStats).length}</p>
-                </div>
-              </div>
-            )}
-
-            {stats?.lastUpload && (
-              <div className="stat-card last-upload">
-                <div className="stat-icon">📅</div>
-                <div className="stat-content">
-                  <h3>Last Updated</h3>
-                  <p className="stat-text">{new Date(stats.lastUpload.timestamp).toLocaleDateString()}</p>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* NBL Category Distribution */}
-          {stats?.categoryStats && Object.keys(stats.categoryStats).length > 0 && (
-            <div className="category-section">
+          {/* NBL Category Cards */}
+          {(stats?.totalRecords || 0) > 0 && stats?.categoryStats && (
+            <div className="category-cards-section">
               <h2>NBL Category Distribution</h2>
-              <p className="section-description">
-                Summary of resources organized by their NBL (Non-Billable) category status
-              </p>
-              <div className="category-grid">
+              <div className="category-cards-grid">
                 {Object.entries(stats.categoryStats)
                   .sort(([,a], [,b]) => b - a) // Sort by count descending
                   .map(([category, count]) => {
                     const percentage = stats.totalRecords > 0 
                       ? ((count / stats.totalRecords) * 100).toFixed(1)
-                      : '0';
+                      : '0.0';
+                    
+                    const getCategoryColor = (cat) => {
+                      const colors = {
+                        'NBL': '#ef4444', // red
+                        'Awaiting billing': '#f59e0b', // amber
+                        'NBL for the month': '#3b82f6', // blue
+                        'NBL for month': '#3b82f6', // blue (alternative spelling)
+                        'Billed': '#10b981', // emerald
+                      };
+                      return colors[cat] || '#6b7280'; // gray for unknown
+                    };
                     
                     return (
                       <div 
                         key={category} 
-                        className="category-card enhanced clickable"
+                        className="category-card"
                         style={{ borderLeftColor: getCategoryColor(category) }}
-                        onClick={() => handleCategoryClick(category)}
-                        title={`Click to view ${count} records in ${category} category`}
                       >
                         <div className="category-header">
-                          <div className="category-info">
-                            <h3>{category}</h3>
-                            <p className="category-description">
-                              {getCategoryDescription(category)}
-                            </p>
-                          </div>
+                          <h3>{category}</h3>
                           <div className="category-metrics">
                             <span 
-                              className="category-badge"
+                              className="category-count"
                               style={{ backgroundColor: getCategoryColor(category) }}
                             >
                               {count}
@@ -261,7 +322,7 @@ const Dashboard = () => {
           )}
 
           {/* No Data Message */}
-          {(!stats?.categoryStats || Object.keys(stats.categoryStats).length === 0) && stats?.totalRecords === 0 && (
+          {stats?.totalRecords === 0 && (
             <div className="no-data-section">
               <div className="no-data-card">
                 <div className="no-data-icon">📊</div>
@@ -276,7 +337,7 @@ const Dashboard = () => {
           )}
 
           {/* Summary Breakdown Table */}
-          {breakdownData && breakdownData.totalRecords > 0 && (
+          {(stats?.totalRecords || 0) > 0 && (
             <div className="summary-table-section">
               <h2>Detailed Summary Breakdown</h2>
               <div className="summary-table-container">
@@ -289,157 +350,129 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* GenC/PA Row */}
-                    <tr className="main-row">
+                    {/* Total Records Row */}
+                    <tr className="main-row total-row">
+                      <td className="category-name"><strong>Total Records</strong></td>
+                      <td className="count-value"><strong>{stats?.totalRecords || 0}</strong></td>
+                      <td className="percentage-value"><strong>100.0%</strong></td>
+                    </tr>
+                    
+                    {/* GenC/PA Row - based on secondary NBL category */}
+                    <tr className="main-row genc-row">
                       <td className="category-name">GenC/PA Records</td>
-                      <td className="count-value">{breakdownData.gencPaCount}</td>
+                      <td className="count-value">{breakdownData?.gencPaCount || 0}</td>
                       <td className="percentage-value">
-                        {((breakdownData.gencPaCount / breakdownData.totalRecords) * 100).toFixed(1)}%
+                        {(stats?.totalRecords || 0) > 0 ? (((breakdownData?.gencPaCount || 0) / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
                       </td>
                     </tr>
                     
                     {/* Non-GenC Row */}
-                    <tr className="main-row">
+                    <tr className="main-row non-genc-row">
                       <td className="category-name">Non-GenC Records</td>
-                      <td className="count-value">{breakdownData.nonGencCount}</td>
+                      <td className="count-value">{breakdownData?.nonGencCount || 0}</td>
                       <td className="percentage-value">
-                        {((breakdownData.nonGencCount / breakdownData.totalRecords) * 100).toFixed(1)}%
+                        {(stats?.totalRecords || 0) > 0 ? (((breakdownData?.nonGencCount || 0) / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
                       </td>
                     </tr>
                     
-                    {/* Billed Sub-row */}
-                    <tr className="sub-row">
-                      <td className="category-name sub-category">↳ Already Billed</td>
-                      <td className="count-value">{breakdownData.billedCount}</td>
-                      <td className="percentage-value">
-                        {((breakdownData.billedCount / breakdownData.totalRecords) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                    
-                    {/* Awaiting Billing Sub-row */}
-                    <tr className="sub-row">
-                      <td className="category-name sub-category">↳ Awaiting Billing</td>
-                      <td className="count-value">{breakdownData.awaitingBillingCount}</td>
-                      <td className="percentage-value">
-                        {((breakdownData.awaitingBillingCount / breakdownData.totalRecords) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                    
-                    {/* NBL for Month Sub-row (indented under Non-GenC) */}
-                    <tr className="sub-row">
-                      <td className="category-name sub-category">↳ NBL for Month</td>
-                      <td className="count-value">{breakdownData.nblForMonthCount}</td>
-                      <td className="percentage-value">
-                        {((breakdownData.nblForMonthCount / breakdownData.totalRecords) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                    
-                    {/* NBL for Month Secondary Categories (sub-sub-rows) */}
-                    {Object.entries(breakdownData.nblForMonthSecondaryBreakdown || {}).map(([secondaryCategory, count]) => (
-                      <tr key={secondaryCategory} className="sub-sub-row">
-                        <td className="category-name sub-sub-category">　　↳ {secondaryCategory}</td>
-                        <td className="count-value">{count}</td>
+                    {/* Already Billed - sub-menu under Non-GenC Records */}
+                    {breakdownData?.billedCount > 0 && (
+                      <tr className="sub-sub-row">
+                        <td className="category-name sub-sub-category">　　Already Billed</td>
+                        <td className="count-value">{breakdownData.billedCount}</td>
                         <td className="percentage-value">
-                          {((count / breakdownData.totalRecords) * 100).toFixed(1)}%
+                          {(stats?.totalRecords || 0) > 0 ? ((breakdownData.billedCount / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
                         </td>
                       </tr>
-                    ))}
+                    )}
+                    
+                    {/* Awaiting Billing - sub-menu under Non-GenC Records */}
+                    {breakdownData?.awaitingBillingCount > 0 && (
+                      <tr className="sub-sub-row">
+                        <td className="category-name sub-sub-category">　　Awaiting Billing</td>
+                        <td className="count-value">{breakdownData.awaitingBillingCount}</td>
+                        <td className="percentage-value">
+                          {(stats?.totalRecords || 0) > 0 ? ((breakdownData.awaitingBillingCount / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* NBL for Month - sub-category under Non-GenC Records */}
+                    {breakdownData?.nblForMonthCount > 0 && (
+                      <>
+                        <tr className="sub-sub-row">
+                          <td className="category-name sub-sub-category">　　NBL for Month</td>
+                          <td className="count-value">{breakdownData.nblForMonthCount}</td>
+                          <td className="percentage-value">
+                            {(stats?.totalRecords || 0) > 0 ? ((breakdownData.nblForMonthCount / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                          </td>
+                        </tr>
+                        
+                        {/* NBL for Month Secondary Categories - based on NBL Secondary Category field */}
+                        {breakdownData?.nblForMonthBreakdown?.awaitingBilling > 0 && (
+                          <tr className="sub-sub-row">
+                            <td className="category-name sub-sub-sub-category">　　　　Awaiting Billing</td>
+                            <td className="count-value">{breakdownData.nblForMonthBreakdown.awaitingBilling}</td>
+                            <td className="percentage-value">
+                              {(stats?.totalRecords || 0) > 0 ? ((breakdownData.nblForMonthBreakdown.awaitingBilling / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                            </td>
+                          </tr>
+                        )}
+                        
+                        {breakdownData?.nblForMonthBreakdown?.markedForRelease > 0 && (
+                          <tr className="sub-sub-row">
+                            <td className="category-name sub-sub-sub-category">　　　　Marked for Release</td>
+                            <td className="count-value">{breakdownData.nblForMonthBreakdown.markedForRelease}</td>
+                            <td className="percentage-value">
+                              {(stats?.totalRecords || 0) > 0 ? ((breakdownData.nblForMonthBreakdown.markedForRelease / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                            </td>
+                          </tr>
+                        )}
+                        
+                        {breakdownData?.nblForMonthBreakdown?.mlReturn > 0 && (
+                          <tr className="sub-sub-row">
+                            <td className="category-name sub-sub-sub-category">　　　　ML Return</td>
+                            <td className="count-value">{breakdownData.nblForMonthBreakdown.mlReturn}</td>
+                            <td className="percentage-value">
+                              {(stats?.totalRecords || 0) > 0 ? ((breakdownData.nblForMonthBreakdown.mlReturn / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* NBL - sub-menu under Non-GenC Records */}
+                    {breakdownData?.nblCount > 0 && (
+                      <tr className="sub-sub-row">
+                        <td className="category-name sub-sub-category">　　NBL</td>
+                        <td className="count-value">{breakdownData.nblCount}</td>
+                        <td className="percentage-value">
+                          {(stats?.totalRecords || 0) > 0 ? ((breakdownData.nblCount / stats.totalRecords) * 100).toFixed(1) : '0.0'}%
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* Show message if no breakdown data is available */}
+                    {!breakdownData && (
+                      <tr>
+                        <td colSpan="3" className="loading-row">
+                          <em>Loading detailed breakdown data...</em>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
               
-              {/* Email Summary Button */}
+              {/* Email Summary Button - Always show when there are records */}
               <div className="summary-actions">
                 <button 
                   className="email-summary-btn"
                   onClick={handleSendSummaryEmails}
-                  disabled={!breakdownData || breakdownData.totalRecords === 0 || emailSending}
+                  disabled={!breakdownData || (stats?.totalRecords || 0) === 0 || emailSending}
                 >
                   {emailSending ? '📤 Sending...' : '📧 Email Summary Report'}
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Category Records Modal */}
-          {showModal && (
-            <div className="modal-overlay" onClick={handleModalClick}>
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h2>{selectedCategory} Records</h2>
-                  <span className="record-count">({categoryRecords.length} records)</span>
-                  <button className="close-modal" onClick={closeModal}>✖</button>
-                </div>
-                <div className="modal-body">
-                  {recordsLoading ? (
-                    <div className="loading-spinner">Loading records...</div>
-                  ) : (
-                    <div className="records-list">
-                      {categoryRecords.length > 0 ? (
-                        categoryRecords.map((record, index) => (
-                          <div key={index} className="record-item">
-                            <div className="record-header">
-                              <h4>{record['Associate Name'] || 'N/A'}</h4>
-                              <span className="record-id">ID: {record['Associate ID']}</span>
-                            </div>
-                            <div className="record-details">
-                              <div className="detail-row">
-                                <span className="label">Account:</span>
-                                <span className="value">{record['Account Name'] || 'N/A'}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Project:</span>
-                                <span className="value">{record['Project Description'] || 'N/A'}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Department:</span>
-                                <span className="value">{record['Department Name'] || 'N/A'}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Service Line:</span>
-                                <span className="value">{record['Service Line'] || 'N/A'}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Allocation:</span>
-                                <span className="value">{record['Percent Allocation']}%</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Grade:</span>
-                                <span className="value">{record['Grade Mapping'] || 'N/A'}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="label">Primary State:</span>
-                                <span className="value">{record['Primary State Tag'] || 'N/A'}</span>
-                              </div>
-                              {record['Secondary State Tag'] && record['Secondary State Tag'] !== '0' && (
-                                <div className="detail-row">
-                                  <span className="label">Secondary State:</span>
-                                  <span className="value">{record['Secondary State Tag']}</span>
-                                </div>
-                              )}
-                              {record['Billable/ Release Date(MM/DD/YYYY)'] && (
-                                <div className="detail-row">
-                                  <span className="label">Release Date:</span>
-                                  <span className="value">{record['Billable/ Release Date(MM/DD/YYYY)']}</span>
-                                </div>
-                              )}
-                              {record['Remarks'] && (
-                                <div className="detail-row">
-                                  <span className="label">Remarks:</span>
-                                  <span className="value">{record['Remarks']}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="no-records">
-                          <p>No records found for this category.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           )}

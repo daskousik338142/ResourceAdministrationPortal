@@ -4,14 +4,34 @@ import '../../styles/navbar.css';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isResourceAllocationOpen, setIsResourceAllocationOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const location = useLocation();
 
   const isActive = (path) => {
     return location.pathname === path;
   };
 
+  const isResourceAllocationActive = () => {
+    return location.pathname === '/new-allocations' ||
+           location.pathname === '/existing-allocations';
+  };
+
+  const isDashboardActive = () => {
+    return location.pathname === '/dashboard' ||
+           location.pathname === '/resource-allocation-dashboard';
+  };
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const toggleResourceAllocation = () => {
+    setIsResourceAllocationOpen(!isResourceAllocationOpen);
+  };
+
+  const toggleDashboard = () => {
+    setIsDashboardOpen(!isDashboardOpen);
   };
 
   const closeMenu = () => {
@@ -60,14 +80,36 @@ const Navbar = () => {
             <span className="menu-icon-item">🏠</span>
             Home
           </Link>
-          <Link 
-            to="/dashboard" 
-            className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            <span className="menu-icon-item">📊</span>
-            Dashboard
-          </Link>
+          
+          {/* Dashboard Menu */}
+          <div className="nav-dropdown">
+            <button 
+              className={`nav-link dropdown-toggle ${isDashboardActive() ? 'active' : ''}`}
+              onClick={toggleDashboard}
+            >
+              <span className="menu-icon-item">📊</span>
+              Dashboard
+              <span className={`dropdown-arrow ${isDashboardOpen ? 'open' : ''}`}>▼</span>
+            </button>
+            <div className={`dropdown-content ${isDashboardOpen ? 'open' : ''}`}>
+              <Link 
+                to="/dashboard" 
+                className={`nav-link sub-link ${isActive('/dashboard') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📊</span>
+                NBL Dashboard
+              </Link>
+              <Link 
+                to="/resource-allocation-dashboard" 
+                className={`nav-link sub-link ${isActive('/resource-allocation-dashboard') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📈</span>
+                Resource Allocation Dashboard
+              </Link>
+            </div>
+          </div>
           <Link 
             to="/nbl-list" 
             className={`nav-link ${isActive('/nbl-list') ? 'active' : ''}`}
@@ -76,6 +118,37 @@ const Navbar = () => {
             <span className="menu-icon-item">📋</span>
             NBL List
           </Link>
+          
+          {/* Resource Allocation Menu */}
+          <div className="nav-dropdown">
+            <button 
+              className={`nav-link dropdown-toggle ${isResourceAllocationActive() ? 'active' : ''}`}
+              onClick={toggleResourceAllocation}
+            >
+              <span className="menu-icon-item">📈</span>
+              Resource Allocation
+              <span className={`dropdown-arrow ${isResourceAllocationOpen ? 'open' : ''}`}>▼</span>
+            </button>
+            <div className={`dropdown-content ${isResourceAllocationOpen ? 'open' : ''}`}>
+              <Link 
+                to="/existing-allocations" 
+                className={`nav-link sub-link ${isActive('/existing-allocations') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📋</span>
+                Existing Allocations
+              </Link>
+              <Link 
+                to="/new-allocations" 
+                className={`nav-link sub-link ${isActive('/new-allocations') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">✨</span>
+                New Allocations
+              </Link>
+            </div>
+          </div>
+          
           <Link 
             to="/admin" 
             className={`nav-link ${isActive('/admin') ? 'active' : ''}`}

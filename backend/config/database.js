@@ -106,6 +106,84 @@ class SQLiteDatabase {
       )
     `);
 
+    // Allocation Data table - for resource allocation data with proper business columns
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS allocation_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CustomerID TEXT,
+        CustomerName TEXT,
+        AssociateID TEXT,
+        AssociateName TEXT,
+        Designation TEXT,
+        GradeDescription TEXT,
+        DepartmentID TEXT,
+        DepartmentName TEXT,
+        ProjectID TEXT,
+        ProjectName TEXT,
+        ProjectType TEXT,
+        ProjectBillability TEXT,
+        AllocationStartDate TEXT,
+        AllocationEndDate TEXT,
+        AssociateBillability TEXT,
+        AllocationStatus TEXT,
+        AllocationPercentage REAL,
+        ProjectRole TEXT,
+        OperationRole TEXT,
+        OffShoreOnsite TEXT,
+        Country TEXT,
+        City TEXT,
+        LocationDescription TEXT,
+        ManagerID TEXT,
+        ManagerName TEXT,
+        SupervisorID TEXT,
+        SupervisorName TEXT,
+        BillabilityReason TEXT,
+        PrimaryStateTag TEXT,
+        SecondaryStateTag TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // New Allocations table - for new allocation data with same schema
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS new_allocations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CustomerID TEXT,
+        CustomerName TEXT,
+        AssociateID TEXT,
+        AssociateName TEXT,
+        Designation TEXT,
+        GradeDescription TEXT,
+        DepartmentID TEXT,
+        DepartmentName TEXT,
+        ProjectID TEXT,
+        ProjectName TEXT,
+        ProjectType TEXT,
+        ProjectBillability TEXT,
+        AllocationStartDate TEXT,
+        AllocationEndDate TEXT,
+        AssociateBillability TEXT,
+        AllocationStatus TEXT,
+        AllocationPercentage REAL,
+        ProjectRole TEXT,
+        OperationRole TEXT,
+        OffShoreOnsite TEXT,
+        Country TEXT,
+        City TEXT,
+        LocationDescription TEXT,
+        ManagerID TEXT,
+        ManagerName TEXT,
+        SupervisorID TEXT,
+        SupervisorName TEXT,
+        BillabilityReason TEXT,
+        PrimaryStateTag TEXT,
+        SecondaryStateTag TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database tables created successfully');
     
     // Ensure all required columns exist (migration)

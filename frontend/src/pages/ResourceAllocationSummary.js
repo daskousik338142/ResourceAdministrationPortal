@@ -73,66 +73,45 @@ const ResourceAllocationSummary = () => {
       const response = await api.getAllocationData();
       if (response.data.success && response.data.data.length > 0) {
         const records = response.data.data;
-        // Define the exact 30 business columns that should be displayed
-        const PREDEFINED_BUSINESS_COLUMNS = [
-          'CustomerID', 'CustomerName', 'AssociateID', 'AssociateName', 'Designation',
-          'GradeDescription', 'DepartmentID', 'DepartmentName', 'ProjectID', 'ProjectName',
-          'ProjectType', 'ProjectBillability', 'AllocationStartDate', 'AllocationEndDate',
-          'AssociateBillability', 'AllocationStatus', 'AllocationPercentage', 'ProjectRole',
-          'OperationRole', 'OffShoreOnsite', 'Country', 'City', 'LocationDescription',
-          'ManagerID', 'ManagerName', 'SupervisorID', 'SupervisorName', 'BillabilityReason',
-          'PrimaryStateTag', 'SecondaryStateTag'
-        ];
-        // Show all key-value pairs for first record
-        Object.keys(records[0]).slice(0, 15).forEach(key => {
-        });
+        
+        // Get the first record to determine available columns
         const firstRecord = records[0];
-        // Only use predefined business columns that exist in the data
-        const availableBusinessColumns = PREDEFINED_BUSINESS_COLUMNS.filter(col => 
-          firstRecord.hasOwnProperty(col)
+        
+        // Get available columns from the data (excluding system columns)
+        const systemColumns = ['id', 'created_at', 'updated_at'];
+        const availableColumns = Object.keys(firstRecord).filter(col => 
+          !systemColumns.includes(col) && firstRecord[col] !== null
         );
-        // Use only predefined business columns as headers
-        const headerRow = availableBusinessColumns;
-        // Convert records back to array format using only predefined columns
-        const dataRows = records.map((record, recordIndex) => {
-          const row = headerRow.map((header, headerIndex) => {
-            const value = record[header];
+        
+        // Use the available columns directly as headers
+        const headerRow = availableColumns;
+        
+        // Convert records to array format
+        const dataRows = records.map((record) => {
+          return availableColumns.map((col) => {
+            const value = record[col];
             // Apply date formatting for date columns
             let formattedValue = value;
-            if (isDateColumn(header) && value !== null && value !== undefined && value !== '') {
+            if (isDateColumn(col) && value !== null && value !== undefined && value !== '') {
               formattedValue = formatDateToMMDDYYYY(value);
-              if (recordIndex === 0) {
-              }
             }
-            if (recordIndex === 0) {
-            }
-            // Handle null/undefined values better - display as empty string but maintain data quality
+            // Handle null/undefined values
             return (formattedValue === null || formattedValue === undefined) ? '' : formattedValue;
           });
-          if (recordIndex === 0) {
-          }
-          return row;
         });
-        if (dataRows.length > 0) {
-        }
-        // Filter out rows that are mostly empty (optional additional filtering)
-        const qualityDataRows = dataRows.filter(row => {
-          const nonEmptyValues = row.filter(cell => 
-            cell !== null && cell !== undefined && cell !== '' && cell.toString().trim() !== ''
-          );
-          // Keep rows that have at least 15% non-empty values (less aggressive)
-          return (nonEmptyValues.length / row.length) >= 0.15;
-        });
+        
         setHeaders(headerRow);
-        setAllocationData(qualityDataRows); // Use filtered data instead of all data
-        setFileName(records[0].file_name || 'Existing Data');
-        setLastSaved(records[0].upload_timestamp ? new Date(records[0].upload_timestamp).toLocaleString() : null);
+        setAllocationData(dataRows);
+        setFileName('Existing Allocation Data');
+        setLastSaved(records[0].created_at ? new Date(records[0].created_at).toLocaleString() : null);
+        
         // Initialize column visibility
         const initialVisibility = {};
         headerRow.forEach((header, index) => {
           initialVisibility[index] = true;
         });
         setVisibleColumns(initialVisibility);
+        
         // Initialize column filters
         const initialFilters = {};
         headerRow.forEach((header, index) => {
@@ -244,72 +223,41 @@ const ResourceAllocationSummary = () => {
             setIsLoading(false);
             return;
           }
-          // Define the exact 30 business columns that should be processed
-          const PREDEFINED_BUSINESS_COLUMNS = [
-            'CustomerID', 'CustomerName', 'AssociateID', 'AssociateName', 'Designation',
-            'GradeDescription', 'DepartmentID', 'DepartmentName', 'ProjectID', 'ProjectName',
-            'ProjectType', 'ProjectBillability', 'AllocationStartDate', 'AllocationEndDate',
-            'AssociateBillability', 'AllocationStatus', 'AllocationPercentage', 'ProjectRole',
-            'OperationRole', 'OffShoreOnsite', 'Country', 'City', 'LocationDescription',
-            'ManagerID', 'ManagerName', 'SupervisorID', 'SupervisorName', 'BillabilityReason',
-            'PrimaryStateTag', 'SecondaryStateTag'
-          ];
+          
           // Extract headers and data
           const rawHeaderRow = jsonData[0];
-          const rawDataRows = jsonData.slice(1).filter(row => {
-            // Less aggressive filtering: row must have at least 15% non-empty values
-            const nonEmptyValues = row.filter(cell => 
-              cell !== null && 
-              cell !== undefined && 
-              cell !== '' && 
-              cell.toString().trim() !== ''
-            );
-            return (nonEmptyValues.length / row.length) >= 0.15;
-          });
-          // Filter headers to only include predefined business columns
-          const headerIndexMap = [];
-          const filteredHeaders = [];
-          rawHeaderRow.forEach((header, index) => {
-            if (PREDEFINED_BUSINESS_COLUMNS.includes(header)) {
-              filteredHeaders.push(header);
-              headerIndexMap.push(index);
-            }
-          });
-          const ignoredHeaders = rawHeaderRow.filter(header => !PREDEFINED_BUSINESS_COLUMNS.includes(header));
-          // Filter data rows to only include predefined columns
+          const rawDataRows = jsonData.slice(1);
+          // Use ALL headers from spreadsheet - no filtering
+          const filteredHeaders = rawHeaderRow.map(header => 
+            (header === null || header === undefined || header === '') ? '' : header.toString()
+          );
+          
+          const headerIndexMap = filteredHeaders.map((header, index) => index);
+          
+          // Use ALL data rows - no filtering
           const dataRows = rawDataRows.map(row => {
             return headerIndexMap.map(index => row[index]);
           });
-          // Prepare records for backend using only filtered headers
+          
+          // Prepare records for backend using all headers
           const recordsForBackend = dataRows.map((row, index) => {
             const record = {};
-            let mappedValues = 0;
-            let emptyValues = 0;
             filteredHeaders.forEach((header, headerIndex) => {
               const cellValue = row[headerIndex];
               // Handle date formatting for date columns
               let processedValue = cellValue;
               if (isDateColumn(header) && cellValue !== null && cellValue !== undefined && cellValue !== '') {
                 processedValue = formatDateToMMDDYYYY(cellValue);
-                if (index === 0) {
-                }
               }
-              // Only set non-empty values, leave empty values as empty string
-              if (processedValue !== null && processedValue !== undefined && processedValue !== '' && processedValue.toString().trim() !== '') {
-                record[header] = processedValue;
-                mappedValues++;
-              } else {
-                record[header] = ''; // Use empty string instead of null
-                emptyValues++;
-              }
-              if (index === 0 && headerIndex < 10) {
-              }
+              // Set all values, even empty ones
+              record[header] = (processedValue === null || processedValue === undefined) ? '' : processedValue;
             });
-            if (index === 0) {
-            }
             return record;
           });
-          // Send data to backend using filtered headers
+          
+          console.log(`Prepared ${recordsForBackend.length} records for upload`);
+          
+          // Send data to backend using all records
           const uploadData = async () => {
             try {
               const response = await api.uploadAllocationData(recordsForBackend, file.name, filteredHeaders);
@@ -343,27 +291,14 @@ const ResourceAllocationSummary = () => {
               const newAllocationsJsonData = XLSX.utils.sheet_to_json(newAllocationsWorksheet, { header: 1 });
               if (newAllocationsJsonData.length > 0) {
                 const newAllocationsHeaderRow = newAllocationsJsonData[0];
-                const newAllocationsDataRows = newAllocationsJsonData.slice(1).filter(row => {
-                  // Less aggressive filtering: row must have at least 15% non-empty values
-                  const nonEmptyValues = row.filter(cell => 
-                    cell !== null && 
-                    cell !== undefined && 
-                    cell !== '' && 
-                    cell.toString().trim() !== ''
-                  );
-                  return (nonEmptyValues.length / row.length) >= 0.15;
-                });
+                const newAllocationsDataRows = newAllocationsJsonData.slice(1);
+                
                 if (newAllocationsDataRows.length > 0) {
                   const newAllocationsRecords = newAllocationsDataRows.map((row, index) => {
                     const record = {};
                     newAllocationsHeaderRow.forEach((header, headerIndex) => {
                       const value = row[headerIndex];
-                      // Only set non-empty values, leave empty values as empty string
-                      if (value !== null && value !== undefined && value !== '' && value.toString().trim() !== '') {
-                        record[header] = value;
-                      } else {
-                        record[header] = ''; // Use empty string instead of null
-                      }
+                      record[header] = (value === null || value === undefined) ? '' : value;
                     });
                     return record;
                   });
@@ -379,27 +314,14 @@ const ResourceAllocationSummary = () => {
           };
           await uploadData();
           await processNewAllocationsTab();
-          // Show completion message with column filtering info
-          const message = `File processed successfully!\n- AllocationReport data saved with ${filteredHeaders.length} valid columns\n- ${ignoredHeaders.length} columns ignored: ${ignoredHeaders.slice(0, 3).join(', ')}${ignoredHeaders.length > 3 ? '...' : ''}\n- ${workbook.Sheets['NewAllocations'] ? 'NewAllocations data saved to New Allocations Database' : 'NewAllocations tab not found'}`;
+          // Show completion message
+          const message = `File processed successfully!\n- AllocationReport data saved with ${filteredHeaders.length} columns\n- ${workbook.Sheets['NewAllocations'] ? 'NewAllocations data saved to New Allocations Database' : 'NewAllocations tab not found'}`;
           alert(message);
           // Save filtered headers to backend for future use
           await api.saveAllocationHeaders(filteredHeaders);
-          // Set state to use filtered data and headers
-          setHeaders(filteredHeaders);
-          setAllocationData(dataRows);
-          setFileName(file.name);
-          // Initialize column visibility
-          const initialVisibility = {};
-          filteredHeaders.forEach((header, index) => {
-            initialVisibility[index] = true;
-          });
-          setVisibleColumns(initialVisibility);
-          // Initialize column filters
-          const initialFilters = {};
-          filteredHeaders.forEach((header, index) => {
-            initialFilters[index] = '';
-          });
-          setColumnFilters(initialFilters);
+          
+          // Reload data from backend to show filtered/processed data
+          await loadExistingData();
           // Reload data from database to ensure UI reflects persistent state
           await loadExistingData();
           setSearchTerm('');

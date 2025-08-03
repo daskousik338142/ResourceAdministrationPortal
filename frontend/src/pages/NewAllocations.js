@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import api from '../services/api';
-import '../styles/new-allocations.css';
+import '../styles/resource-allocation-summary.css';
 // Date formatting utility functions
 const formatDateToMMDDYYYY = (dateValue) => {
   if (!dateValue || dateValue === '') return '';
@@ -68,73 +68,55 @@ const NewAllocations = () => {
       const response = await api.getNewAllocations();
       if (response.data.success && response.data.data.length > 0) {
         const records = response.data.data;
-        // Define the exact 30 business columns that should be displayed (same as allocation data)
-        const PREDEFINED_BUSINESS_COLUMNS = [
-          'CustomerID', 'CustomerName', 'AssociateID', 'AssociateName', 'Designation',
-          'GradeDescription', 'DepartmentID', 'DepartmentName', 'ProjectID', 'ProjectName',
-          'ProjectType', 'ProjectBillability', 'AllocationStartDate', 'AllocationEndDate',
-          'AssociateBillability', 'AllocationStatus', 'AllocationPercentage', 'ProjectRole',
-          'OperationRole', 'OffShoreOnsite', 'Country', 'City', 'LocationDescription',
-          'ManagerID', 'ManagerName', 'SupervisorID', 'SupervisorName', 'BillabilityReason',
-          'PrimaryStateTag', 'SecondaryStateTag'
-        ];
-        // Show all key-value pairs for first record
-        Object.keys(records[0]).slice(0, 15).forEach(key => {
-        });
+        
+        console.log(`Loading ${records.length} new allocation records from backend`);
+        
         const firstRecord = records[0];
-        // Only use predefined business columns that exist in the data
-        const availableBusinessColumns = PREDEFINED_BUSINESS_COLUMNS.filter(col => 
-          firstRecord.hasOwnProperty(col)
+        
+        // Use ALL columns from the database record (matching ResourceAllocationSummary approach)
+        const availableColumns = Object.keys(firstRecord).filter(col => 
+          col !== 'id' && col !== 'created_at' && col !== 'updated_at'
         );
-        // Use only predefined business columns as headers
-        const headerRow = availableBusinessColumns;
-        // Convert records back to array format using only predefined columns
-        const dataRows = records.map((record, recordIndex) => {
-          const row = headerRow.map((header, headerIndex) => {
+        
+        console.log('Available columns:', availableColumns);
+        
+        // Convert records back to array format using all available columns
+        const dataRows = records.map(record => {
+          return availableColumns.map(header => {
             const value = record[header];
             // Apply date formatting for date columns
             let formattedValue = value;
             if (isDateColumn(header) && value !== null && value !== undefined && value !== '') {
               formattedValue = formatDateToMMDDYYYY(value);
-              if (recordIndex === 0) {
-              }
             }
-            if (recordIndex === 0) {
-            }
-            // Handle null/undefined values better - display as empty string but maintain data quality
+            // Handle null/undefined values - display as empty string
             return (formattedValue === null || formattedValue === undefined) ? '' : formattedValue;
           });
-          if (recordIndex === 0) {
-          }
-          return row;
         });
-        if (dataRows.length > 0) {
-        }
-        // Filter out rows that are mostly empty (optional additional filtering)
-        const qualityDataRows = dataRows.filter(row => {
-          const nonEmptyValues = row.filter(cell => 
-            cell !== null && cell !== undefined && cell !== '' && cell.toString().trim() !== ''
-          );
-          // Keep rows that have at least 15% non-empty values (less aggressive)
-          return (nonEmptyValues.length / row.length) >= 0.15;
-        });
-        setHeaders(headerRow);
-        setNewAllocationsData(qualityDataRows); // Use filtered data instead of all data
+        
+        console.log(`Processed ${dataRows.length} data rows`);
+        
+        setHeaders(availableColumns);
+        setNewAllocationsData(dataRows); // Use ALL data without filtering
         setFileName(records[0].file_name || 'Existing Data');
         setLastSaved(records[0].upload_timestamp ? new Date(records[0].upload_timestamp).toLocaleString() : null);
-        // Initialize column visibility
+        
+        // Initialize column visibility - show all columns
         const initialVisibility = {};
-        headerRow.forEach((header, index) => {
+        availableColumns.forEach((header, index) => {
           initialVisibility[index] = true;
         });
         setVisibleColumns(initialVisibility);
+        
         // Initialize column filters
         const initialFilters = {};
-        headerRow.forEach((header, index) => {
+        availableColumns.forEach((header, index) => {
           initialFilters[index] = '';
         });
         setColumnFilters(initialFilters);
+        
       } else {
+        console.log('No new allocation data found in backend');
         setNewAllocationsData([]);
         setHeaders([]);
         setFileName('');
@@ -143,6 +125,7 @@ const NewAllocations = () => {
         setColumnFilters({});
       }
     } catch (error) {
+      console.error('Error loading new allocation data:', error);
       // Reset state on error
       setNewAllocationsData([]);
       setHeaders([]);
@@ -277,7 +260,7 @@ const NewAllocations = () => {
     return widths;
   }, [headers, filteredAndSortedData, currentPage, recordsPerPage]);
   return (
-    <div className="new-allocations-container">
+    <div className="resource-allocation-container">
       {/* Header Section */}
       <div className="header-section">
         <h2>New Allocations Data</h2>

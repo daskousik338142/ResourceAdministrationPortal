@@ -8,14 +8,16 @@ const ResourceAllocationDashboard = () => {
       lastUpload: null,
       fileName: null,
       billableAnalytics: { billable: 0, nonBillable: 0, unknown: 0 },
-      gradeAnalytics: {}
+      gradeAnalytics: {},
+      offshoreAnalytics: { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
     },
     newAllocations: {
       totalRecords: 0,
       lastUpload: null,
       fileName: null,
       billableAnalytics: { billable: 0, nonBillable: 0, unknown: 0 },
-      gradeAnalytics: {}
+      gradeAnalytics: {},
+      offshoreAnalytics: { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
     }
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -26,34 +28,69 @@ const ResourceAllocationDashboard = () => {
     try {
       setIsLoading(true);
       // Load existing allocations stats and analytics
-      const [existingAllocationsResponse, existingBillableResponse, existingGradeResponse] = await Promise.all([
+      const [existingAllocationsResponse, existingBillableResponse, existingGradeResponse, existingOffshoreResponse] = await Promise.all([
         api.getAllocationDataStats(),
         api.getAllocationDataBillableAnalytics(),
-        api.getAllocationDataGradeAnalytics()
+        api.getAllocationDataGradeAnalytics(),
+        api.getAllocationDataOffshoreAnalytics()
       ]);
       // Load new allocations stats and analytics
-      const [newAllocationsResponse, newBillableResponse, newGradeResponse] = await Promise.all([
+      const [newAllocationsResponse, newBillableResponse, newGradeResponse, newOffshoreResponse] = await Promise.all([
         api.getNewAllocationsStats(),
         api.getNewAllocationsBillableAnalytics(),
-        api.getNewAllocationsGradeAnalytics()
+        api.getNewAllocationsGradeAnalytics(),
+        api.getNewAllocationsOffshoreAnalytics()
       ]);
+
+      console.log('API Responses:', {
+        existingAllocationsResponse: existingAllocationsResponse.data,
+        existingBillableResponse: existingBillableResponse.data,
+        existingGradeResponse: existingGradeResponse.data,
+        existingOffshoreResponse: existingOffshoreResponse.data,
+        newAllocationsResponse: newAllocationsResponse.data,
+        newBillableResponse: newBillableResponse.data,
+        newGradeResponse: newGradeResponse.data,
+        newOffshoreResponse: newOffshoreResponse.data
+      });
       setDashboardData({
         existingAllocations: {
           totalRecords: existingAllocationsResponse.data.success ? existingAllocationsResponse.data.stats.totalRecords : 0,
           lastUpload: existingAllocationsResponse.data.success ? { timestamp: existingAllocationsResponse.data.stats.lastUpload } : null,
           fileName: existingAllocationsResponse.data.success ? existingAllocationsResponse.data.stats.uploadInfo?.fileName : null,
           billableAnalytics: existingBillableResponse.data.success ? existingBillableResponse.data.analytics : { billable: 0, nonBillable: 0, unknown: 0 },
-          gradeAnalytics: existingGradeResponse.data.success ? existingGradeResponse.data.analytics : {}
+          gradeAnalytics: existingGradeResponse.data.success ? existingGradeResponse.data.analytics : {},
+          offshoreAnalytics: existingOffshoreResponse.data.success ? existingOffshoreResponse.data.analytics : { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
         },
         newAllocations: {
           totalRecords: newAllocationsResponse.data.success ? newAllocationsResponse.data.stats.totalRecords : 0,
           lastUpload: newAllocationsResponse.data.success ? { timestamp: newAllocationsResponse.data.stats.lastUpload } : null,
           fileName: newAllocationsResponse.data.success ? newAllocationsResponse.data.stats.uploadInfo?.fileName : null,
           billableAnalytics: newBillableResponse.data.success ? newBillableResponse.data.analytics : { billable: 0, nonBillable: 0, unknown: 0 },
-          gradeAnalytics: newGradeResponse.data.success ? newGradeResponse.data.analytics : {}
+          gradeAnalytics: newGradeResponse.data.success ? newGradeResponse.data.analytics : {},
+          offshoreAnalytics: newOffshoreResponse.data.success ? newOffshoreResponse.data.analytics : { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
         }
       });
     } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Set default empty data on error
+      setDashboardData({
+        existingAllocations: {
+          totalRecords: 0,
+          lastUpload: null,
+          fileName: null,
+          billableAnalytics: { billable: 0, nonBillable: 0, unknown: 0 },
+          gradeAnalytics: {},
+          offshoreAnalytics: { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
+        },
+        newAllocations: {
+          totalRecords: 0,
+          lastUpload: null,
+          fileName: null,
+          billableAnalytics: { billable: 0, nonBillable: 0, unknown: 0 },
+          gradeAnalytics: {},
+          offshoreAnalytics: { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' }
+        }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +126,32 @@ const ResourceAllocationDashboard = () => {
     });
     return Object.values(combinedGrades).reduce((sum, count) => sum + count, 0);
   };
+  const getCombinedOffshoreAnalytics = () => {
+    const combined = { offshore: 0, onshore: 0, unknown: 0, ratio: '0%' };
+    
+    // Add existing allocations offshore data
+    combined.offshore += dashboardData.existingAllocations.offshoreAnalytics.offshore;
+    combined.onshore += dashboardData.existingAllocations.offshoreAnalytics.onshore;
+    combined.unknown += dashboardData.existingAllocations.offshoreAnalytics.unknown;
+    
+    // Add new allocations offshore data
+    combined.offshore += dashboardData.newAllocations.offshoreAnalytics.offshore;
+    combined.onshore += dashboardData.newAllocations.offshoreAnalytics.onshore;
+    combined.unknown += dashboardData.newAllocations.offshoreAnalytics.unknown;
+    
+    // Calculate combined ratio using formula: (onshore * 100) / total offshore
+    if (combined.offshore > 0) {
+      const ratio = (combined.onshore * 100) / combined.offshore;
+      combined.ratio = `${ratio.toFixed(1)}%`;
+    } else if (combined.onshore > 0) {
+      combined.ratio = '∞%'; // Infinite when there's onshore but no offshore
+    } else {
+      combined.ratio = '0%';
+    }
+    
+    return combined;
+  };
+
   return (
     <div className="resource-allocation-dashboard-container">
       <div className="dashboard-header">
@@ -334,6 +397,63 @@ const ResourceAllocationDashboard = () => {
                     </div>
                   ));
                 })()}
+              </div>
+            </div>
+            
+            {/* Combined Offshore/Onshore Row */}
+            <div className="analytics-row">
+              <h3>Total Location Distribution</h3>
+              <div className="analytics-cards-grid">
+                <div className="analytics-card offshore">
+                  <div className="analytics-card-content">
+                    <div className="analytics-card-value">
+                      {getCombinedOffshoreAnalytics().offshore.toLocaleString()}
+                    </div>
+                    <div className="analytics-card-percentage">
+                      {calculatePercentage(getCombinedOffshoreAnalytics().offshore, getCombinedTotal())}
+                    </div>
+                    <div className="analytics-card-label">Offshore Resources</div>
+                  </div>
+                  <div className="analytics-card-icon">🌍</div>
+                </div>
+                <div className="analytics-card onshore">
+                  <div className="analytics-card-content">
+                    <div className="analytics-card-value">
+                      {getCombinedOffshoreAnalytics().onshore.toLocaleString()}
+                    </div>
+                    <div className="analytics-card-percentage">
+                      {calculatePercentage(getCombinedOffshoreAnalytics().onshore, getCombinedTotal())}
+                    </div>
+                    <div className="analytics-card-label">Onshore Resources</div>
+                  </div>
+                  <div className="analytics-card-icon">🏢</div>
+                </div>
+                <div className="analytics-card ratio">
+                  <div className="analytics-card-content">
+                    <div className="analytics-card-value">
+                      {getCombinedOffshoreAnalytics().ratio}
+                    </div>
+                    <div className="analytics-card-percentage">
+                      Onshore Ratio vs Offshore
+                    </div>
+                    <div className="analytics-card-label">Resource Ratio</div>
+                  </div>
+                  <div className="analytics-card-icon">⚖️</div>
+                </div>
+                {getCombinedOffshoreAnalytics().unknown > 0 && (
+                  <div className="analytics-card unknown">
+                    <div className="analytics-card-content">
+                      <div className="analytics-card-value">
+                        {getCombinedOffshoreAnalytics().unknown.toLocaleString()}
+                      </div>
+                      <div className="analytics-card-percentage">
+                        {calculatePercentage(getCombinedOffshoreAnalytics().unknown, getCombinedTotal())}
+                      </div>
+                      <div className="analytics-card-label">Unknown Location</div>
+                    </div>
+                    <div className="analytics-card-icon">❓</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

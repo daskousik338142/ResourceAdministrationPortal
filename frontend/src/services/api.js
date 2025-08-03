@@ -240,6 +240,84 @@ class ApiService {
   saveHeaders(headers) {
     return this.api.post('/nbl-list/headers', { headers });
   }
+
+  // Allocation Data endpoints
+  getAllocationData() {
+    return this.api.get('/allocation-data');
+  }
+
+  uploadAllocationData(data, fileName, headers) {
+    return this.api.post('/allocation-data/upload-json', {
+      data,
+      fileName,
+      headers
+    });
+  }
+
+  clearAllocationData() {
+    return this.api.delete('/allocation-data/clear');
+  }
+
+  getAllocationDataStats() {
+    return this.api.get('/allocation-data/stats');
+  }
+
+  getAllocationDataBillableAnalytics() {
+    return this.api.get('/allocation-data/billable-analytics');
+  }
+
+  getAllocationDataGradeAnalytics() {
+    return this.api.get('/allocation-data/grade-analytics');
+  }
+
+  getAllocationDataOffshoreAnalytics() {
+    return this.api.get('/allocation-data/offshore-analytics');
+  }
+
+  getAllocationDataHeaders() {
+    return this.api.get('/allocation-data/headers');
+  }
+
+  saveAllocationHeaders(headers) {
+    return this.api.post('/allocation-data/headers', { headers });
+  }
+
+  // New Allocations endpoints
+  getNewAllocations() {
+    return this.api.get('/new-allocations');
+  }
+
+  uploadNewAllocations(data, fileName, headers) {
+    return this.api.post('/new-allocations/upload', {
+      data,
+      fileName,
+      headers
+    });
+  }
+
+  clearNewAllocations() {
+    return this.api.delete('/new-allocations/clear');
+  }
+
+  getNewAllocationsStats() {
+    return this.api.get('/new-allocations/stats');
+  }
+
+  getNewAllocationsBillableAnalytics() {
+    return this.api.get('/new-allocations/billable-analytics');
+  }
+
+  getNewAllocationsGradeAnalytics() {
+    return this.api.get('/new-allocations/grade-analytics');
+  }
+
+  getNewAllocationsOffshoreAnalytics() {
+    return this.api.get('/new-allocations/offshore-analytics');
+  }
+
+  getNewAllocationsHeaders() {
+    return this.api.get('/new-allocations/headers');
+  }
 }
 
 export default new ApiService();

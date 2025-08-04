@@ -129,10 +129,12 @@ const ResourceEvaluationHistory = () => {
       return;
     }
     
+    // Get button reference and store original text
+    const button = event.target;
+    const originalText = button.textContent;
+    
     try {
       // Show loading state
-      const button = event.target;
-      const originalText = button.textContent;
       button.textContent = 'Converting...';
       button.disabled = true;
       
@@ -183,7 +185,6 @@ const ResourceEvaluationHistory = () => {
       alert('Error converting resume: ' + error.message);
     } finally {
       // Reset button state
-      const button = event.target;
       button.textContent = originalText;
       button.disabled = false;
     }
@@ -470,39 +471,41 @@ Continue?`;
                       )}
                     </td>
                     <td className="actions-cell">
-                      <button
-                        className="btn btn-outline btn-view"
-                        onClick={() => handleView(evaluation)}
-                        title="View evaluation details"
-                      >
-                        View
-                      </button>
-                      {evaluation.resume_file && (
+                      <div className="actions-container">
+                        {viewMode === 'completed' ? (
+                          <button
+                            className="btn btn-outline btn-reopen"
+                            onClick={() => handleReOpen(evaluation)}
+                            title="Re-open evaluation"
+                          >
+                            Re-Open
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-outline btn-evaluate"
+                            onClick={() => handleEvaluate(evaluation)}
+                            title="Edit evaluation details"
+                          >
+                            Evaluate
+                          </button>
+                        )}
                         <button
-                          className="btn btn-outline btn-convert"
-                          onClick={(e) => handleConvertResume(evaluation, e)}
-                          title="Convert resume to standard format"
+                          className="btn btn-outline btn-view"
+                          onClick={() => handleView(evaluation)}
+                          title="View evaluation details"
                         >
-                          Convert
+                          View
                         </button>
-                      )}
-                      {viewMode === 'completed' ? (
-                        <button
-                          className="btn btn-outline btn-reopen"
-                          onClick={() => handleReOpen(evaluation)}
-                          title="Re-open evaluation"
-                        >
-                          Re-Open
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-outline btn-evaluate"
-                          onClick={() => handleEvaluate(evaluation)}
-                          title="Edit evaluation details"
-                        >
-                          Evaluate
-                        </button>
-                      )}
+                        {evaluation.resume_file && (
+                          <button
+                            className="btn btn-outline btn-convert"
+                            onClick={(e) => handleConvertResume(evaluation, e)}
+                            title="Convert resume to standard format"
+                          >
+                            Convert
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

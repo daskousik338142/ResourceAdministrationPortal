@@ -1,0 +1,749 @@
+/* Resource Evaluation History - Professional Data Table Theme */
+
+.resource-evaluation-history-container {
+  max-width: 100vw;
+  margin: 0 auto;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 60px);
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+}
+
+.page-header {
+  text-align: left;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+  color: white;
+}
+
+.page-header h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+/* Filters Section */
+.filters-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+
+.search-filter {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #495057;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #495057;
+  box-shadow: 0 0 0 2px rgba(73, 80, 87, 0.1);
+}
+
+.status-filter {
+  min-width: 150px;
+}
+
+.status-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #495057;
+  background: white;
+  cursor: pointer;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.stat-item {
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+
+.stat-item strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Table Container */
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: calc(100vw - 2rem);
+  /* Add smooth scrolling for touch devices */
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+/* Show scrollbar hint on hover for overflow tables */
+.table-container:hover {
+  overflow-x: auto;
+}
+
+/* Prevent text selection during scroll */
+.table-container.scrolling {
+  user-select: none;
+}
+
+.evaluation-history-table {
+  width: 100%;
+  min-width: 1280px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  table-layout: fixed;
+}
+
+/* Optimized column widths to prevent scrolling */
+.evaluation-history-table th:nth-child(1),
+.evaluation-history-table td:nth-child(1) {
+  width: 80px; /* Associate ID */
+}
+
+.evaluation-history-table th:nth-child(2),
+.evaluation-history-table td:nth-child(2) {
+  width: 120px; /* Associate Name */
+}
+
+.evaluation-history-table th:nth-child(3),
+.evaluation-history-table td:nth-child(3) {
+  width: 160px; /* Email */
+}
+
+.evaluation-history-table th:nth-child(4),
+.evaluation-history-table td:nth-child(4) {
+  width: 100px; /* Phone */
+}
+
+.evaluation-history-table th:nth-child(5),
+.evaluation-history-table td:nth-child(5) {
+  width: 120px; /* Client Name */
+}
+
+.evaluation-history-table th:nth-child(6),
+.evaluation-history-table td:nth-child(6) {
+  width: 90px; /* Created Date */
+}
+
+.evaluation-history-table th:nth-child(7),
+.evaluation-history-table td:nth-child(7) {
+  width: 70px; /* Aging */
+}
+
+.evaluation-history-table th:nth-child(8),
+.evaluation-history-table td:nth-child(8) {
+  width: 100px; /* Internal Status */
+}
+
+.evaluation-history-table th:nth-child(9),
+.evaluation-history-table td:nth-child(9) {
+  width: 100px; /* Client Status */
+}
+
+.evaluation-history-table th:nth-child(10),
+.evaluation-history-table td:nth-child(10) {
+  width: 130px; /* Resume */
+}
+
+.evaluation-history-table th:nth-child(11),
+.evaluation-history-table td:nth-child(11) {
+  width: 210px; /* Actions */
+}
+.evaluation-history-table td:nth-child(7) {
+  width: 80px; /* Aging */
+}
+
+.evaluation-history-table th:nth-child(8),
+.evaluation-history-table td:nth-child(8) {
+  width: 110px; /* Internal Status */
+}
+
+.evaluation-history-table th:nth-child(9),
+.evaluation-history-table td:nth-child(9) {
+  width: 110px; /* Client Status */
+}
+
+.evaluation-history-table th:nth-child(10),
+.evaluation-history-table td:nth-child(10) {
+  width: 140px; /* Resume */
+}
+
+.evaluation-history-table th:nth-child(11),
+.evaluation-history-table td:nth-child(11) {
+  width: 170px; /* Actions */
+}
+
+.evaluation-history-table th {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.6rem 0.4rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  position: relative;
+}
+
+.evaluation-history-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+
+.evaluation-history-table th.sortable:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+
+.sort-icon {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.sort-icon.active {
+  color: #495057;
+  font-weight: bold;
+}
+
+.evaluation-history-table td {
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.evaluation-history-table tbody tr {
+  transition: background-color 0.3s ease;
+}
+
+.evaluation-history-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Cell Specific Styles */
+.associate-id {
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.associate-name {
+  font-weight: 500;
+  color: #212529;
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email {
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.85rem;
+  color: #495057;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phone {
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.85rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.client-name {
+  font-size: 0.85rem;
+  color: #495057;
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.created-date {
+  font-size: 0.85rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+/* Aging Styles */
+.aging {
+  text-align: center;
+  font-weight: bold;
+  position: relative;
+}
+
+.aging-value {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.aging-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+.aging-fresh {
+  color: #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.aging-medium {
+  color: #ffc107;
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.aging-old {
+  color: #fd7e14;
+  background-color: rgba(253, 126, 20, 0.1);
+}
+
+.aging-critical {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Status Badges */
+.status-cell {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pending {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.status-in-progress {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Resume Link */
+.resume-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Resume Download Section */
+.resume-download-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  min-width: 150px;
+  white-space: nowrap;
+}
+
+.resume-filename {
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.75rem;
+  color: #495057;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.download-arrow-btn {
+  background: transparent;
+  border: 3px solid #10b981;
+  color: #10b981;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.download-arrow-btn:hover {
+  background-color: #10b981;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.resume-link {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.resume-link:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.no-file {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* Actions */
+.actions-cell {
+  text-align: center;
+  white-space: nowrap;
+  min-width: 210px;
+  padding: 0.6rem 0.2rem !important;
+}
+
+.btn {
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 60px;
+  margin: 0 0.15rem;
+  display: inline-block;
+}
+
+/* Outline Buttons */
+.btn-outline {
+  background: transparent;
+  border: 2px solid;
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-evaluate {
+  border-color: #495057;
+  color: #495057;
+  min-width: 65px;
+}
+
+.btn-evaluate:hover {
+  background-color: #495057;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-view {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  min-width: 50px;
+}
+
+.btn-view:hover {
+  background-color: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-reopen {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  min-width: 65px;
+}
+
+.btn-reopen:hover {
+  background-color: #f59e0b;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-convert {
+  border-color: #10b981;
+  color: #10b981;
+  min-width: 65px;
+}
+
+.btn-convert:hover {
+  background-color: #10b981;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-convert:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-convert:disabled:hover {
+  background-color: transparent;
+  color: #10b981;
+}
+
+/* Aging Legend */
+.aging-legend {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+}
+
+.aging-legend h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.legend-items {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Loading and No Data */
+.loading, .no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.loading {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* View Mode Toggle */
+.view-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+.view-mode-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #6c757d;
+  background: transparent;
+  color: #6c757d;
+  border-radius: 6px;
+  font-family: 'Aptos', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-mode-btn:hover {
+  background-color: #6c757d;
+  color: white;
+}
+
+.view-mode-btn.active {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* Visual indicator for scrollable content */
+.table-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(108, 117, 125, 0.1));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.table-container.has-overflow::after {
+  opacity: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 1350px) {
+  .resource-evaluation-history-container {
+    max-width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 1200px) {
+  .evaluation-history-table {
+    font-size: 0.75rem;
+    min-width: 1200px;
+  }
+  
+  .evaluation-history-table th,
+  .evaluation-history-table td {
+    padding: 0.5rem 0.3rem;
+  }
+  
+  .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+    min-width: 55px;
+  }
+  
+  .actions-cell {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 992px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .summary-stats {
+    margin-left: 0;
+    justify-content: center;
+  }
+  
+  .legend-items {
+    justify-content: center;
+  }
+  
+  .evaluation-history-table {
+    min-width: 1100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .resource-evaluation-history-container {
+    padding: 0.5rem;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .evaluation-history-table {
+    min-width: 1000px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .filters-section {
+    padding: 0.75rem;
+  }
+  
+  .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.6rem;
+    min-width: 45px;
+    margin: 0 0.1rem;
+  }
+  
+  .actions-cell {
+    min-width: 160px;
+    padding: 0.5rem 0.15rem !important;
+  }
+  
+  .resume-filename {
+    max-width: 60px;
+    font-size: 0.6rem;
+  }
+  
+  .download-arrow-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+}

@@ -1,10 +1,11 @@
 /* Admin Page Styles */
 .admin-page {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1600px; /* Increased to 1600px for maximum space */
   margin: 0 auto;
   background: #f8f9fa;
   min-height: 100vh;
+  width: 100%; /* Use full available width */
 }
 
 .admin-container {
@@ -12,6 +13,8 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Use full container width */
+  min-width: 1200px; /* Ensure minimum width for proper display */
 }
 
 .admin-header {
@@ -39,6 +42,8 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: nowrap; /* Prevent wrapping */
+  min-height: 60px; /* Ensure consistent height */
 }
 
 .admin-actions button {
@@ -51,6 +56,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap; /* Prevent text wrapping in buttons */
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 .add-email-btn.primary {
@@ -105,6 +112,12 @@
 
 .emails-section {
   padding: 32px;
+  overflow-x: auto; /* Add horizontal scrolling if needed */
+}
+
+.distribution-lists-section {
+  padding: 32px;
+  overflow-x: auto; /* Add horizontal scrolling if needed */
 }
 
 .no-emails {
@@ -133,26 +146,30 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  width: 100%; /* Use full available width */
+  min-width: 1100px; /* Ensure minimum width for all content */
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 2fr 100px 150px 140px;
-  gap: 16px;
-  padding: 16px;
+  grid-template-columns: 3fr 1.5fr 2.5fr 140px 140px 200px; /* Increased all column widths */
+  gap: 20px; /* Increased gap for better spacing */
+  padding: 16px 20px;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
   font-weight: 600;
   color: #374151;
+  min-width: 1100px; /* Ensure minimum width */
 }
 
 .email-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 2fr 100px 150px 140px;
-  gap: 16px;
-  padding: 16px;
+  grid-template-columns: 3fr 1.5fr 2.5fr 140px 140px 200px; /* Match header columns */
+  gap: 20px; /* Match header gap */
+  padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s;
+  min-width: 1100px; /* Ensure minimum width */
 }
 
 .email-row:last-child {
@@ -210,18 +227,24 @@
 
 .email-cell.actions {
   display: flex;
-  gap: 8px;
+  gap: 12px; /* Increased gap between buttons */
+  justify-content: flex-start;
+  flex-wrap: nowrap; /* Prevent button wrapping */
+  min-width: 180px; /* Ensure enough space for both buttons */
 }
 
 .edit-btn {
   background: #3b82f6;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 8px 16px; /* Increased padding for better button size */
   border-radius: 4px;
   font-size: 0.85rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-shrink: 0; /* Prevent shrinking */
+  min-width: 60px; /* Minimum button width */
 }
 
 .edit-btn:hover {
@@ -232,11 +255,14 @@
   background: #ef4444;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 8px 16px; /* Increased padding for better button size */
   border-radius: 4px;
   font-size: 0.85rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-shrink: 0; /* Prevent shrinking */
+  min-width: 70px; /* Minimum button width */
 }
 
 .delete-btn:hover {
@@ -392,8 +418,301 @@
   cursor: not-allowed;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* Tab Navigation */
+.admin-tabs {
+  display: flex;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-btn {
+  padding: 16px 24px;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.tab-btn.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+  background: white;
+}
+
+.tab-content {
+  background: white;
+}
+
+/* Distribution Lists Section */
+.distribution-lists-section {
+  padding: 32px;
+}
+
+.no-dls {
+  text-align: center;
+  padding: 80px 40px;
+  color: #6b7280;
+}
+
+.no-dls-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.no-dls h3 {
+  margin: 16px 0 8px 0;
+  color: #374151;
+  font-size: 1.5rem;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.loading-message .spinner {
+  margin: 0 auto 16px auto;
+}
+
+/* Distribution Lists Table */
+.dls-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  width: 100%; /* Use full available width */
+  min-width: 900px; /* Ensure minimum width for DL table */
+}
+
+.dls-table .table-header {
+  background: #f9fafb;
+  display: grid;
+  grid-template-columns: 4fr 1.5fr 2.5fr 220px; /* Increased column widths for DL table */
+  gap: 20px; /* Increased gap */
+  padding: 12px 20px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  min-width: 900px; /* Ensure minimum width */
+}
+
+.dl-row {
+  display: grid;
+  grid-template-columns: 4fr 1.5fr 2.5fr 220px; /* Match header columns */
+  gap: 20px; /* Match header gap */
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  align-items: center;
+  transition: background-color 0.2s;
+  min-width: 900px; /* Ensure minimum width */
+}
+
+.dl-row:hover {
+  background: #f9fafb;
+}
+
+.dl-row:last-child {
+  border-bottom: none;
+}
+
+.dl-cell {
+  color: #374151;
+}
+
+.dl-cell.dl-name .dl-badge {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.dl-cell.email-count .count-badge {
+  background: #e0f2fe;
+  color: #0277bd;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dl-cell.actions {
+  display: flex;
+  gap: 12px; /* Increased gap */
+  justify-content: flex-start;
+  flex-wrap: nowrap; /* Prevent button wrapping */
+  min-width: 200px; /* Ensure enough space for DL action buttons */
+}
+
+/* Large Modal for Distribution Lists */
+.large-modal {
+  max-width: 700px !important;
+  max-height: 80vh;
+}
+
+.large-modal .modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Email Selection */
+.email-selection {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+}
+
+.no-emails-available {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.email-checkboxes {
+  padding: 8px;
+}
+
+.email-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.email-checkbox:hover {
+  background: #f9fafb;
+}
+
+.email-checkbox input[type="checkbox"] {
+  margin-right: 12px;
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+}
+
+.email-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-address {
+  font-weight: 600;
+  color: #374151;
+}
+
+.email-name {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.inactive-indicator {
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.selected-count {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Enhanced Email Table Styles */
+.email-cell.distribution-list .dl-badge {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.email-cell.distribution-list .no-dl {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Enhanced Button Styles */
+.add-dl-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.add-dl-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+}
+
+/* Medium screen adjustments */
+@media (max-width: 1200px) {
+  .admin-page {
+    max-width: 100%;
+    padding: 15px;
+  }
+  
+  .admin-container {
+    min-width: 1000px; /* Reduce minimum width slightly */
+  }
+  
+  .emails-table {
+    min-width: 1000px; /* Adjust table minimum width */
+  }
+  
+  .table-header {
+    grid-template-columns: 2.5fr 1.2fr 2fr 130px 130px 180px; /* Slightly smaller columns */
+    gap: 16px;
+    min-width: 1000px;
+  }
+  
+  .email-row {
+    grid-template-columns: 2.5fr 1.2fr 2fr 130px 130px 180px;
+    gap: 16px;
+    min-width: 1000px;
+  }
+  
+  .dls-table {
+    min-width: 800px;
+  }
+  
+  .dls-table .table-header {
+    grid-template-columns: 3fr 1.2fr 2fr 200px;
+    gap: 16px;
+    min-width: 800px;
+  }
+  
+  .dl-row {
+    grid-template-columns: 3fr 1.2fr 2fr 200px;
+    gap: 16px;
+    min-width: 800px;
+  }
+  
+  .admin-actions {
+    padding: 20px 24px;
+  }
+}
+
+/* Responsive Design - Only for very small screens */
+@media (max-width: 580px) {
   .admin-page {
     padding: 10px;
   }
@@ -468,5 +787,91 @@
 
   .modal-footer button {
     width: 100%;
+  }
+
+  .admin-tabs {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: none;
+  }
+
+  .tab-btn.active {
+    border-left: 3px solid #4f46e5;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .dls-table .table-header {
+    display: none;
+  }
+
+  .dl-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: white;
+  }
+
+  .dl-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .dl-cell:last-child {
+    border-bottom: none;
+  }
+
+  .dl-cell:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  .dl-cell.dl-name:before {
+    content: "List Name: ";
+  }
+
+  .dl-cell.email-count:before {
+    content: "Emails: ";
+  }
+
+  .dl-cell.created:before {
+    content: "Created: ";
+  }
+
+  .dl-cell.actions:before {
+    content: "Actions: ";
+  }
+
+  .dl-cell.actions {
+    justify-content: flex-end;
+  }
+
+  .large-modal {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .email-checkbox {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .email-checkbox input[type="checkbox"] {
+    margin-right: 0;
+    margin-bottom: 4px;
   }
 }

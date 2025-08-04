@@ -6,6 +6,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isResourceAllocationOpen, setIsResourceAllocationOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isResourceEvaluationOpen, setIsResourceEvaluationOpen] = useState(false);
   const location = useLocation();
 
   const isActive = (path) => {
@@ -19,7 +20,13 @@ const Navbar = () => {
 
   const isDashboardActive = () => {
     return location.pathname === '/dashboard' ||
-           location.pathname === '/resource-allocation-dashboard';
+           location.pathname === '/resource-allocation-dashboard' ||
+           location.pathname === '/resource-evaluation-dashboard';
+  };
+
+  const isResourceEvaluationActive = () => {
+    return location.pathname === '/resource-evaluation-workflow' ||
+           location.pathname === '/resource-evaluation-history';
   };
 
   const toggleMenu = () => {
@@ -32,6 +39,10 @@ const Navbar = () => {
 
   const toggleDashboard = () => {
     setIsDashboardOpen(!isDashboardOpen);
+  };
+
+  const toggleResourceEvaluation = () => {
+    setIsResourceEvaluationOpen(!isResourceEvaluationOpen);
   };
 
   const closeMenu = () => {
@@ -108,6 +119,14 @@ const Navbar = () => {
                 <span className="menu-icon-item">📈</span>
                 Resource Allocation Dashboard
               </Link>
+              <Link 
+                to="/resource-evaluation-dashboard" 
+                className={`nav-link sub-link ${isActive('/resource-evaluation-dashboard') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📋</span>
+                Resource Evaluation Dashboard
+              </Link>
             </div>
           </div>
           <Link 
@@ -145,6 +164,36 @@ const Navbar = () => {
               >
                 <span className="menu-icon-item">✨</span>
                 New Allocations
+              </Link>
+            </div>
+          </div>
+          
+          {/* Resource Evaluation Menu */}
+          <div className="nav-dropdown">
+            <button 
+              className={`nav-link dropdown-toggle ${isResourceEvaluationActive() ? 'active' : ''}`}
+              onClick={toggleResourceEvaluation}
+            >
+              <span className="menu-icon-item">📝</span>
+              Resource Evaluation
+              <span className={`dropdown-arrow ${isResourceEvaluationOpen ? 'open' : ''}`}>▼</span>
+            </button>
+            <div className={`dropdown-content ${isResourceEvaluationOpen ? 'open' : ''}`}>
+              <Link 
+                to="/resource-evaluation-workflow" 
+                className={`nav-link sub-link ${isActive('/resource-evaluation-workflow') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📋</span>
+                Resource Evaluation Workflow
+              </Link>
+              <Link 
+                to="/resource-evaluation-history" 
+                className={`nav-link sub-link ${isActive('/resource-evaluation-history') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <span className="menu-icon-item">📊</span>
+                Resource Evaluation History
               </Link>
             </div>
           </div>

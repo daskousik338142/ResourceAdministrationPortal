@@ -15,7 +15,7 @@
 
 .main-content {
   padding-top: 20px; /* Reduced from 64px to 20px */
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 60px);
   background-color: #ffffff;
   color: #1f2937;
   overflow-y: auto;

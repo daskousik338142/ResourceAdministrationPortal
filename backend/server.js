@@ -37,6 +37,9 @@ app.use(morgan('combined'));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
+// Serve uploaded files statically
+app.use('/api/uploads', express.static('uploads'));
+
 // Routes
 app.use('/api/resources', resourceRoutes);
 app.use('/api/nbl-list', nblListRoutes);

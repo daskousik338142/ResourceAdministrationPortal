@@ -318,6 +318,79 @@ class ApiService {
   getNewAllocationsHeaders() {
     return this.api.get('/new-allocations/headers');
   }
+
+  // Distribution List management methods
+  async getDistributionLists() {
+    try {
+      console.log('Fetching distribution lists');
+      const response = await this.api.get('/email-list/dl/list');
+      console.log('Distribution lists fetched successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching distribution lists:', error);
+      throw error;
+    }
+  }
+
+  async getDistributionListEmails(dlName) {
+    try {
+      console.log('Fetching distribution list emails:', dlName);
+      const response = await this.api.get(`/email-list/dl/${encodeURIComponent(dlName)}`);
+      console.log('Distribution list emails fetched successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching distribution list emails:', error);
+      throw error;
+    }
+  }
+
+  async createDistributionList(dlData) {
+    try {
+      console.log('Creating distribution list:', dlData);
+      const response = await this.api.post('/email-list/dl/create', dlData);
+      console.log('Distribution list created successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating distribution list:', error);
+      throw error;
+    }
+  }
+
+  async updateDistributionList(dlName, dlData) {
+    try {
+      console.log('Updating distribution list:', dlName, dlData);
+      const response = await this.api.put(`/email-list/dl/${encodeURIComponent(dlName)}`, dlData);
+      console.log('Distribution list updated successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating distribution list:', error);
+      throw error;
+    }
+  }
+
+  async deleteDistributionList(dlName) {
+    try {
+      console.log('Deleting distribution list:', dlName);
+      const response = await this.api.delete(`/email-list/dl/${encodeURIComponent(dlName)}`);
+      console.log('Distribution list deleted successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting distribution list:', error);
+      throw error;
+    }
+  }
+
+  async removeEmailFromDistributionList(emailId) {
+    try {
+      console.log('Removing email from distribution list:', emailId);
+      const response = await this.api.post('/email-list/dl/remove-email', { emailId });
+      console.log('Email removed from distribution list successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error removing email from distribution list:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

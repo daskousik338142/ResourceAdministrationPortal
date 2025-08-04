@@ -184,6 +184,43 @@ class SQLiteDatabase {
       )
     `);
 
+    // Resource Evaluations table
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS resource_evaluations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        associate_id TEXT NOT NULL,
+        associate_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        country_code TEXT DEFAULT '+91',
+        phone_number TEXT NOT NULL,
+        client_name TEXT NOT NULL,
+        resume_file TEXT,
+        remarks TEXT,
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        internal_evaluation_status TEXT DEFAULT 'pending',
+        internal_evaluation_date DATETIME,
+        internal_evaluation_feedback TEXT,
+        client_evaluation_status TEXT DEFAULT 'pending',
+        client_evaluation_date DATETIME,
+        client_feedback TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Email List table - for managing admin email addresses
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS email_list (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        description TEXT,
+        distribution_list TEXT,
+        active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database tables created successfully');
     
     // Ensure all required columns exist (migration)
@@ -209,6 +246,45 @@ class SQLiteDatabase {
           console.log('Added headers column to nbl_list table');
         }
       }
+      
+      // Check if resource_evaluations table has new columns
+      const evaluationsTableInfo = this.db.exec("PRAGMA table_info(resource_evaluations)");
+      
+      if (evaluationsTableInfo.length > 0) {
+        const evaluationColumnNames = evaluationsTableInfo[0].values.map(row => row[1]);
+        
+        // Add missing columns for resource evaluations
+        if (!evaluationColumnNames.includes('email')) {
+          this.db.run('ALTER TABLE resource_evaluations ADD COLUMN email TEXT');
+          console.log('Added email column to resource_evaluations table');
+        }
+        
+        if (!evaluationColumnNames.includes('country_code')) {
+          this.db.run('ALTER TABLE resource_evaluations ADD COLUMN country_code TEXT DEFAULT "+91"');
+          console.log('Added country_code column to resource_evaluations table');
+        }
+        
+        if (!evaluationColumnNames.includes('phone_number')) {
+          this.db.run('ALTER TABLE resource_evaluations ADD COLUMN phone_number TEXT');
+          console.log('Added phone_number column to resource_evaluations table');
+        }
+        
+        if (!evaluationColumnNames.includes('remarks')) {
+          this.db.run('ALTER TABLE resource_evaluations ADD COLUMN remarks TEXT');
+          console.log('Added remarks column to resource_evaluations table');
+        }
+      }
+      
+      // Check if email_list table has distribution_list column
+      const emailTableInfo = this.db.exec("PRAGMA table_info(email_list)");
+      if (emailTableInfo.length > 0) {
+        const emailColumnNames = emailTableInfo[0].values.map(row => row[1]);
+        
+        if (!emailColumnNames.includes('distribution_list')) {
+          this.db.run('ALTER TABLE email_list ADD COLUMN distribution_list TEXT');
+          console.log('Added distribution_list column to email_list table');
+        }
+      }
     } catch (error) {
       console.warn('Error checking/adding columns:', error.message);
     }
@@ -227,6 +303,9 @@ class SQLiteDatabase {
   all(sql, params = []) {
     try {
       const stmt = this.db.prepare(sql);
+      if (params.length > 0) {
+        stmt.bind(params);
+      }
       const results = [];
       while (stmt.step()) {
         results.push(stmt.getAsObject());
@@ -261,9 +340,10 @@ class SQLiteDatabase {
       stmt.bind(params);
       stmt.step();
       const changes = this.db.getRowsModified();
+      const lastInsertRowid = this.db.exec("SELECT last_insert_rowid()")[0]?.values?.[0]?.[0];
       stmt.free();
       this.saveToFile(); // Save after modifications
-      return { changes };
+      return { changes, lastInsertRowid };
     } catch (error) {
       console.error('Database run error:', error);
       throw error;
